@@ -23,3 +23,9 @@ tracing            = { workspace = true }
 rustls             = { workspace = true }
 tokio-rustls       = { workspace = true }
 rustls-pemfile     = { workspace = true }
+quinn              = { workspace = true }
+aws-lc-rs          = { workspace = true, optional = true }
+
+[features]
+default = []
+aws-lc  = ["dep:aws-lc-rs"]

@@ -6,6 +6,7 @@ pub mod forwarder;
 pub mod grpc;
 pub mod health;
 pub mod listener;
+pub mod quic;
 pub mod service;
 pub mod snapshot;
 pub mod sse;
