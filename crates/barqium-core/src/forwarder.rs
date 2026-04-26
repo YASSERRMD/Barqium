@@ -9,9 +9,10 @@ use hyper_util::client::legacy::{connect::HttpConnector, Client};
 use hyper_util::rt::TokioExecutor;
 
 use crate::error::ProxyError;
+use crate::grpc::is_grpc;
 use crate::snapshot::RouteMatch;
 
-// Hop-by-hop headers that must not be forwarded to the upstream.
+// Hop-by-hop headers stripped before forwarding.
 const HOP_BY_HOP: &[&str] = &[
     "connection",
     "te",
@@ -24,6 +25,10 @@ const HOP_BY_HOP: &[&str] = &[
 ];
 
 /// Connection-pooled HTTP client for upstream requests.
+///
+/// gRPC requests (content-type: application/grpc*) have their request version
+/// set to HTTP/2 so the pool selects an h2 connection when the upstream
+/// supports it (via ALPN on TLS or h2c negotiation on plain TCP).
 #[derive(Clone)]
 pub struct Forwarder {
     client: Client<HttpConnector, Incoming>,
@@ -36,18 +41,20 @@ impl Forwarder {
         Self { client }
     }
 
-    /// Forwards `req` to the upstream specified in `route_match`.
-    /// Strips hop-by-hop headers, rewrites the URI, and enforces the
-    /// upstream timeout.
+    /// Forwards `req` to the upstream in `route`.
+    ///
+    /// Strips hop-by-hop headers, rewrites the URI, and enforces the per-route
+    /// timeout. For gRPC requests the request version is pinned to HTTP/2.
     pub async fn forward(
         &self,
         mut req: Request<Incoming>,
         route: &RouteMatch,
     ) -> Result<Response<BoxBody<Bytes, ProxyError>>, ProxyError> {
-        // Rewrite URI to point at the upstream.
-        *req.uri_mut() = build_upstream_uri(route.upstream_url.as_str(), req.uri())?;
+        if is_grpc(req.headers()) {
+            *req.version_mut() = hyper::Version::HTTP_2;
+        }
 
-        // Strip hop-by-hop headers.
+        *req.uri_mut() = build_upstream_uri(route.upstream_url.as_str(), req.uri())?;
         strip_hop_by_hop(req.headers_mut());
 
         let timeout = Duration::from_millis(route.timeout_ms as u64);
@@ -67,8 +74,7 @@ impl Default for Forwarder {
     }
 }
 
-/// Builds the upstream request URI by combining the upstream base URL with
-/// the original request's path and query.
+/// Builds the upstream URI by appending the original path+query to the base URL.
 fn build_upstream_uri(upstream_url: &str, original: &Uri) -> Result<Uri, ProxyError> {
     let base = upstream_url.trim_end_matches('/');
     let pq = original
