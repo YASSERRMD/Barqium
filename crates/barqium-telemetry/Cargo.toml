@@ -17,6 +17,9 @@ opentelemetry-otlp   = { workspace = true, features = ["http-proto", "reqwest-cl
 prost                = { workspace = true }
 rdkafka              = { workspace = true }
 thiserror            = { workspace = true }
+serde                = { workspace = true }
+serde_json           = { workspace = true }
+uuid                 = { workspace = true }
 
 [build-dependencies]
 prost-build = "0.13"
