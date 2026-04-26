@@ -53,6 +53,12 @@ func main() {
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Route("/tenants", func(r chi.Router) {
 			handler.Tenants(r, q)
+			r.Route("/{tenantId}/upstreams", func(r chi.Router) {
+				handler.Upstreams(r, q)
+			})
+			r.Route("/{tenantId}/routes", func(r chi.Router) {
+				handler.Routes(r, q)
+			})
 		})
 	})
 
