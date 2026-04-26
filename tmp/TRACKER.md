@@ -1,6 +1,6 @@
 # Barqium Build Tracker
 
-**Last updated:** 2026-04-26 08:30 (UTC)
+**Last updated:** 2026-04-26 09:00 (UTC)
 **Current phase:** Phase 2 — Maturity
 **Current branch:** phase_2_maturity
 
@@ -11,7 +11,7 @@
 | Phase | Status | Branch | Started | Merged | Notes |
 |---|---|---|---|---|---|
 | 1 — Foundation | done | phase_1_foundation | 2026-04-26 | 2026-04-26 | 20 of 20 tasks done |
-| 2 — Maturity | in_progress | phase_2_maturity | 2026-04-26 | — | 9 of 20 tasks done |
+| 2 — Maturity | in_progress | phase_2_maturity | 2026-04-26 | — | 10 of 20 tasks done |
 | 3 — AI and MCP | pending | — | — | — | scope to be expanded after P2 merge |
 | 4 — Frontier | pending | — | — | — | rolling phase |
 
@@ -30,7 +30,7 @@
 | P2-T7 | ABAC policy type definitions and evaluator in barqium-policy | done | YASSERRMD | — | passed | |
 | P2-T8 | Multi-tenant RBAC: per-tenant resource scoping in control-api | done | YASSERRMD | — | passed | |
 | P2-T9 | Admin SPA scaffold (React 18 + Vite + Tailwind + shadcn/ui) | done | YASSERRMD | — | passed | |
-| P2-T10 | Admin SPA: OpenAPI client codegen from control-api spec | pending | — | — | pending | |
+| P2-T10 | Admin SPA: OpenAPI client codegen from control-api spec | done | YASSERRMD | — | passed | |
 | P2-T11 | Admin SPA: tenants management page (list + create + delete) | pending | — | — | pending | |
 | P2-T12 | Admin SPA: upstreams management page (CRUD per tenant) | pending | — | — | pending | |
 | P2-T13 | Admin SPA: routes management page (CRUD per tenant) | pending | — | — | pending | |
