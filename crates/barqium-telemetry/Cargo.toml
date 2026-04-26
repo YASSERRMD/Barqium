@@ -13,6 +13,10 @@ tracing-subscriber   = { workspace = true }
 tracing-opentelemetry = { workspace = true }
 opentelemetry        = { workspace = true }
 opentelemetry_sdk    = { workspace = true }
-# HTTP/proto transport; disable default grpc-tonic to avoid tonic dependency.
 opentelemetry-otlp   = { workspace = true, features = ["http-proto", "reqwest-client"] }
+prost                = { workspace = true }
+rdkafka              = { workspace = true }
 thiserror            = { workspace = true }
+
+[build-dependencies]
+prost-build = "0.13"
