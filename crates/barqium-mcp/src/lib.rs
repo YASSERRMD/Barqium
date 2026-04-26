@@ -2,6 +2,7 @@
 
 pub mod client;
 pub mod error;
+pub mod oauth;
 pub mod registry;
 pub mod server;
 pub mod types;
