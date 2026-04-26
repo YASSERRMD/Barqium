@@ -9,19 +9,25 @@ use hyper::{Request, Response};
 use hyper_util::rt::{TokioExecutor, TokioIo};
 use hyper_util::server::conn::auto::Builder as AutoBuilder;
 use tokio::net::TcpListener;
+use tokio_rustls::TlsAcceptor;
 use tracing::info;
 
 use crate::error::ProxyError;
 
 /// Binds a TCP socket and serves HTTP/1.1 and HTTP/2 connections.
 ///
-/// Protocol is selected automatically: HTTP/2 clients send the standard
-/// 24-byte client preface; all other connections are treated as HTTP/1.1.
-/// With TLS (P2-T5) ALPN takes precedence over the preface check.
+/// When `tls` is `Some`, all connections are wrapped with TLS before HTTP
+/// parsing. ALPN (`h2` / `http/1.1`) takes precedence over the raw HTTP/2
+/// preface check performed by `AutoBuilder`. Client certificate verification
+/// (mTLS) is controlled by the `rustls::ServerConfig` embedded in the acceptor.
 ///
-/// The service is cloned per accepted connection; each connection runs on
-/// its own tokio task.
-pub async fn serve<S, B>(addr: &str, service: S) -> Result<(), ProxyError>
+/// The service is cloned per accepted connection; each connection runs on its
+/// own tokio task.
+pub async fn serve<S, B>(
+    addr: &str,
+    service: S,
+    tls: Option<Arc<rustls::ServerConfig>>,
+) -> Result<(), ProxyError>
 where
     S: Service<Request<Incoming>, Response = Response<B>> + Clone + Send + 'static,
     S::Error: Into<Box<dyn std::error::Error + Send + Sync>>,
@@ -40,20 +46,41 @@ where
     let local_addr = listener
         .local_addr()
         .expect("bound socket always has a local address");
-    info!(addr = %local_addr, "HTTP/1.1 + HTTP/2 listener started");
 
+    if tls.is_some() {
+        info!(addr = %local_addr, "TLS HTTP/1.1 + HTTP/2 listener started");
+    } else {
+        info!(addr = %local_addr, "HTTP/1.1 + HTTP/2 listener started");
+    }
+
+    let acceptor = tls.map(TlsAcceptor::from);
     let builder = AutoBuilder::new(TokioExecutor::new());
 
     loop {
         let (stream, peer) = listener.accept().await.map_err(ProxyError::Accept)?;
-        let io = TokioIo::new(stream);
         let svc = service.clone();
         let builder = builder.clone();
+        let acceptor = acceptor.clone();
 
         tokio::spawn(async move {
-            // with_upgrades() is required for WebSocket proxying (P2-T3).
-            if let Err(e) = builder.serve_connection_with_upgrades(io, svc).await {
-                tracing::debug!(peer = %peer, "connection closed: {e}");
+            match acceptor {
+                Some(ref acc) => match acc.accept(stream).await {
+                    Ok(tls_stream) => {
+                        let io = TokioIo::new(tls_stream);
+                        if let Err(e) = builder.serve_connection_with_upgrades(io, svc).await {
+                            tracing::debug!(peer = %peer, "TLS connection closed: {e}");
+                        }
+                    }
+                    Err(e) => {
+                        tracing::debug!(peer = %peer, "TLS handshake failed: {e}");
+                    }
+                },
+                None => {
+                    let io = TokioIo::new(stream);
+                    if let Err(e) = builder.serve_connection_with_upgrades(io, svc).await {
+                        tracing::debug!(peer = %peer, "connection closed: {e}");
+                    }
+                }
             }
         });
     }

@@ -1,6 +1,6 @@
 # Barqium Build Tracker
 
-**Last updated:** 2026-04-26 05:00 (UTC)
+**Last updated:** 2026-04-26 06:30 (UTC)
 **Current phase:** Phase 2 — Maturity
 **Current branch:** phase_2_maturity
 
@@ -11,7 +11,7 @@
 | Phase | Status | Branch | Started | Merged | Notes |
 |---|---|---|---|---|---|
 | 1 — Foundation | done | phase_1_foundation | 2026-04-26 | 2026-04-26 | 20 of 20 tasks done |
-| 2 — Maturity | in_progress | phase_2_maturity | 2026-04-26 | — | 0 of 20 tasks done |
+| 2 — Maturity | in_progress | phase_2_maturity | 2026-04-26 | — | 5 of 20 tasks done |
 | 3 — AI and MCP | pending | — | — | — | scope to be expanded after P2 merge |
 | 4 — Frontier | pending | — | — | — | rolling phase |
 
@@ -21,11 +21,11 @@
 
 | ID | Task | Status | Owner | Commit | Test Status | Notes |
 |---|---|---|---|---|---|---|
-| P2-T1 | HTTP/2 listener in barqium-core (hyper h2, protocol negotiation) | pending | — | — | pending | |
-| P2-T2 | gRPC proxy: content-type detection, HTTP/2 stream passthrough | pending | — | — | pending | |
-| P2-T3 | WebSocket upgrade and bidirectional stream forwarding | pending | — | — | pending | |
-| P2-T4 | SSE passthrough with streaming body (chunked transfer) | pending | — | — | pending | |
-| P2-T5 | mTLS: rustls client-certificate auth on the listener | pending | — | — | pending | |
+| P2-T1 | HTTP/2 listener in barqium-core (hyper h2, protocol negotiation) | done | YASSERRMD | fbcca66 | passed | |
+| P2-T2 | gRPC proxy: content-type detection, HTTP/2 stream passthrough | done | YASSERRMD | 3c0914a | passed | |
+| P2-T3 | WebSocket upgrade and bidirectional stream forwarding | done | YASSERRMD | 8f13cac | passed | |
+| P2-T4 | SSE passthrough with streaming body (chunked transfer) | done | YASSERRMD | 135e934 | passed | |
+| P2-T5 | mTLS: rustls client-certificate auth on the listener | done | YASSERRMD | — | passed | |
 | P2-T6 | OIDC middleware for control-api (Bearer token validation via JWKS) | pending | — | — | pending | |
 | P2-T7 | ABAC policy type definitions and evaluator in barqium-policy | pending | — | — | pending | |
 | P2-T8 | Multi-tenant RBAC: per-tenant resource scoping in control-api | pending | — | — | pending | |

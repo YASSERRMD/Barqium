@@ -8,6 +8,7 @@ pub mod listener;
 pub mod service;
 pub mod snapshot;
 pub mod sse;
+pub mod tls;
 pub mod websocket;
 
 pub use config::DataPlaneConfig;
