@@ -16,6 +16,7 @@ import (
 	"github.com/yasserrmd/barqium/services/control-api/internal/config"
 	"github.com/yasserrmd/barqium/services/control-api/internal/db"
 	"github.com/yasserrmd/barqium/services/control-api/internal/handler"
+	"github.com/yasserrmd/barqium/services/control-api/internal/sqlc/sqlcgen"
 )
 
 func main() {
@@ -38,6 +39,8 @@ func main() {
 	defer pool.Close()
 	slog.Info("postgres connected")
 
+	q := sqlcgen.New(pool)
+
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
@@ -46,6 +49,12 @@ func main() {
 	r.Use(middleware.Timeout(30 * time.Second))
 
 	r.Get("/health", handler.Health(pool))
+
+	r.Route("/api/v1", func(r chi.Router) {
+		r.Route("/tenants", func(r chi.Router) {
+			handler.Tenants(r, q)
+		})
+	})
 
 	srv := &http.Server{
 		Addr:         cfg.ListenAddr,
@@ -78,11 +87,11 @@ func setupLogger(level, format string) {
 	_ = lvl.UnmarshalText([]byte(level))
 
 	opts := &slog.HandlerOptions{Level: lvl}
-	var handler slog.Handler
+	var h slog.Handler
 	if format == "json" {
-		handler = slog.NewJSONHandler(os.Stdout, opts)
+		h = slog.NewJSONHandler(os.Stdout, opts)
 	} else {
-		handler = slog.NewTextHandler(os.Stdout, opts)
+		h = slog.NewTextHandler(os.Stdout, opts)
 	}
-	slog.SetDefault(slog.New(handler))
+	slog.SetDefault(slog.New(h))
 }
