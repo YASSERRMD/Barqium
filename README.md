@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="docs/assets/banner.svg" alt="Barqium — Lightning balanced. Universal gateway for the agentic era." width="100%"/>
+  <img src="docs/assets/banner.png" alt="Barqium — Lightning balanced. Universal gateway for the agentic era." width="100%"/>
 </div>
 
 <br/>
@@ -56,37 +56,9 @@ The smoke test runs **23 end-to-end checks**: tenant creation, route/upstream CR
 
 ## Architecture
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│                        Control Plane (Go)                    │
-│  control-api ──► Postgres ──► outbox-worker ──► Redpanda     │
-│      │                                              │         │
-│  OIDC / JWT auth                              config.changes  │
-│  Tenant · Route · Upstream · Policy CRUD            │         │
-│  AI Provider · Rate Limit · WASM Plugin CRUD         │         │
-└─────────────────────────────────────────────────────┼────────┘
-                                                      │
-                                          ┌───────────▼────────┐
-                                          │  barqium-snapshot  │
-                                          │  Kafka → rkyv →    │
-                                          │  /dev/shm/barqium/ │
-                                          └───────────┬────────┘
-                                                      │ mmap (zero-copy)
-┌─────────────────────────────────────────────────────▼────────┐
-│                        Data Plane (Rust)                     │
-│                                                              │
-│   Listener  (HTTP/1.1 · H2 · H3/QUIC · mTLS)                │
-│       │                                                      │
-│   Route Matcher ◄── UpstreamHealth ◄── HealthChecker         │
-│       │                   │                                  │
-│   Policy Chain        CircuitBreaker                         │
-│   (JWT · API Key · Rate Limit · PII · WASM plugins)          │
-│       │                                                      │
-│   Forwarder (HTTP · gRPC · WebSocket · SSE · GraphQL · SOAP) │
-│       │                                                      │
-│   Telemetry ──► OTLP/Jaeger + Kafka (requests · access · llm)│
-└──────────────────────────────────────────────────────────────┘
-```
+<div align="center">
+  <img src="docs/assets/architecture.png" alt="Barqium architecture — Control Plane, Snapshot, Data Plane" width="80%"/>
+</div>
 
 ### Technology Stack
 
