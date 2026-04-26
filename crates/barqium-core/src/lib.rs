@@ -4,6 +4,7 @@ pub mod config;
 pub mod error;
 pub mod forwarder;
 pub mod grpc;
+pub mod health;
 pub mod listener;
 pub mod service;
 pub mod snapshot;
