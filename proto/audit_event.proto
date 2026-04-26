@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package barqium.audit.v1;
+
+option go_package = "github.com/yasserrmd/barqium/services/control-api/gen/audit/v1;auditv1";
+
+// Carried on the audit.operators Kafka topic.
+// Every operator action is recorded immutably here.
+message AuditEvent {
+  string   event_id    = 1;
+  string   tenant_id   = 2;
+  string   operator_id = 3;
+  string   action      = 4;
+  // JSON-encoded snapshot of the affected resource before and after.
+  string   resource_type    = 5;
+  string   resource_id      = 6;
+  string   before_json      = 7;
+  string   after_json        = 8;
+  // Source IP of the operator request.
+  string   source_ip  = 9;
+  // Unix milliseconds.
+  int64    occurred_at = 10;
+  // HTTP status code of the originating request.
+  uint32   status_code = 11;
+}

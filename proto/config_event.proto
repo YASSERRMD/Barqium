@@ -1,0 +1,85 @@
+syntax = "proto3";
+
+package barqium.config.v1;
+
+option go_package = "github.com/yasserrmd/barqium/services/control-api/gen/config/v1;configv1";
+
+// Carried on the config.changes Kafka topic.
+// Every write to the control-plane DB produces one ConfigEvent.
+message ConfigEvent {
+  // Monotonically increasing sequence number within the tenant.
+  uint64 sequence      = 1;
+  string tenant_id     = 2;
+  // Wall-clock time of the originating DB transaction (Unix ms).
+  int64  occurred_at   = 3;
+  EventType event_type = 4;
+
+  oneof payload {
+    RouteUpserted   route_upserted   = 5;
+    RouteDeleted    route_deleted    = 6;
+    UpstreamUpserted upstream_upserted = 7;
+    UpstreamDeleted  upstream_deleted  = 8;
+  }
+}
+
+enum EventType {
+  EVENT_TYPE_UNSPECIFIED   = 0;
+  EVENT_TYPE_ROUTE_UPSERTED   = 1;
+  EVENT_TYPE_ROUTE_DELETED    = 2;
+  EVENT_TYPE_UPSTREAM_UPSERTED = 3;
+  EVENT_TYPE_UPSTREAM_DELETED  = 4;
+}
+
+// Full snapshot of all active routes for a tenant.
+// Written atomically to /dev/shm/barqium/<tenant_id>.snapshot
+message RouteSnapshot {
+  string  tenant_id    = 1;
+  uint64  sequence     = 2;
+  int64   snapshot_at  = 3;
+  repeated Route routes    = 4;
+  repeated Upstream upstreams = 5;
+}
+
+message Route {
+  string id          = 1;
+  string tenant_id   = 2;
+  // HTTP method pattern ("GET", "*")
+  string method      = 3;
+  // Path prefix, e.g. "/api/v1"
+  string path_prefix = 4;
+  // Host header match (empty = any)
+  string host        = 5;
+  string upstream_id = 6;
+  // Ordered list of policy IDs to evaluate before proxying.
+  repeated string policy_ids = 7;
+  bool   enabled     = 8;
+  int64  created_at  = 9;
+  int64  updated_at  = 10;
+}
+
+message Upstream {
+  string id        = 1;
+  string tenant_id = 2;
+  string name      = 3;
+  // Target URL, e.g. "https://backend.internal:8080"
+  string url       = 4;
+  // Connection timeout in milliseconds.
+  uint32 timeout_ms = 5;
+  bool   enabled   = 6;
+}
+
+message RouteUpserted {
+  Route route = 1;
+}
+
+message RouteDeleted {
+  string route_id = 1;
+}
+
+message UpstreamUpserted {
+  Upstream upstream = 1;
+}
+
+message UpstreamDeleted {
+  string upstream_id = 1;
+}

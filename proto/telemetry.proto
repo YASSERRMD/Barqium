@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package barqium.telemetry.v1;
+
+option go_package = "github.com/yasserrmd/barqium/services/control-api/gen/telemetry/v1;telemetryv1";
+
+// Carried on the telemetry.requests Kafka topic.
+// Emitted by the Rust data plane for every proxied request.
+message RequestTelemetry {
+  string   request_id      = 1;
+  string   tenant_id       = 2;
+  string   route_id        = 3;
+  string   upstream_id     = 4;
+  // HTTP method and path as received.
+  string   method          = 5;
+  string   path            = 6;
+  // Response status code from the upstream.
+  uint32   status_code     = 7;
+  // Time from first byte received to last byte sent, in microseconds.
+  uint64   duration_us     = 8;
+  // Bytes received from client.
+  uint64   request_bytes   = 9;
+  // Bytes sent to client.
+  uint64   response_bytes  = 10;
+  // Policy that rejected the request, empty if allowed.
+  string   rejected_by     = 11;
+  // Node identity (hostname or pod name).
+  string   node_id         = 12;
+  // Unix milliseconds of request arrival.
+  int64    arrived_at      = 13;
+}
+
+// Carried on the telemetry.llm Kafka topic (Phase 3).
+// Emitted by the AI gateway layer for every LLM call.
+message LlmTelemetry {
+  string   request_id      = 1;
+  string   tenant_id       = 2;
+  string   provider        = 3;
+  string   model           = 4;
+  uint32   prompt_tokens   = 5;
+  uint32   completion_tokens = 6;
+  uint64   duration_us     = 7;
+  bool     cache_hit       = 8;
+  bool     fallback_used   = 9;
+  string   fallback_provider = 10;
+  int64    arrived_at      = 11;
+}
