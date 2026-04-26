@@ -98,6 +98,10 @@ func main() {
 				r.Use(tenantScope)
 				handler.RateLimitPolicies(r, q)
 			})
+			r.Route("/{tenantId}/wasm-plugins", func(r chi.Router) {
+				r.Use(tenantScope)
+				handler.WasmPlugins(r, q)
+			})
 		})
 	})
 
