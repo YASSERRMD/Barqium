@@ -57,14 +57,27 @@ func main() {
 		Issuer:   cfg.OIDCIssuer,
 	})
 
+	tenantScope := apimiddleware.TenantScope("admin")
+	adminOnly := apimiddleware.RequireRole("admin")
+
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Use(oidcMiddleware)
+
 		r.Route("/tenants", func(r chi.Router) {
-			handler.Tenants(r, q)
+			// Create and delete tenant are admin-only; reads are open to any valid token.
+			r.With(adminOnly).Post("/", handler.CreateTenantHandler(q))
+			r.With(adminOnly).Delete("/{id}", handler.DeleteTenantHandler(q))
+			// GET /tenants and GET /tenants/{id} and PATCH /tenants/{id} use no extra guard.
+			r.Get("/", handler.ListTenantsHandler(q))
+			r.Get("/{id}", handler.GetTenantHandler(q))
+			r.Patch("/{id}", handler.UpdateTenantHandler(q))
+
 			r.Route("/{tenantId}/upstreams", func(r chi.Router) {
+				r.Use(tenantScope)
 				handler.Upstreams(r, q)
 			})
 			r.Route("/{tenantId}/routes", func(r chi.Router) {
+				r.Use(tenantScope)
 				handler.Routes(r, q)
 			})
 		})

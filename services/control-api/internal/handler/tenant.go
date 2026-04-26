@@ -26,6 +26,21 @@ func Tenants(r chi.Router, q *sqlcgen.Queries) {
 	r.Delete("/{id}", deleteTenant(q))
 }
 
+// CreateTenantHandler returns the handler for POST /tenants.
+func CreateTenantHandler(q *sqlcgen.Queries) http.HandlerFunc { return createTenant(q) }
+
+// ListTenantsHandler returns the handler for GET /tenants.
+func ListTenantsHandler(q *sqlcgen.Queries) http.HandlerFunc { return listTenants(q) }
+
+// GetTenantHandler returns the handler for GET /tenants/{id}.
+func GetTenantHandler(q *sqlcgen.Queries) http.HandlerFunc { return getTenant(q) }
+
+// UpdateTenantHandler returns the handler for PATCH /tenants/{id}.
+func UpdateTenantHandler(q *sqlcgen.Queries) http.HandlerFunc { return updateTenant(q) }
+
+// DeleteTenantHandler returns the handler for DELETE /tenants/{id}.
+func DeleteTenantHandler(q *sqlcgen.Queries) http.HandlerFunc { return deleteTenant(q) }
+
 type createTenantRequest struct {
 	Name    string `json:"name"`
 	Slug    string `json:"slug"`
