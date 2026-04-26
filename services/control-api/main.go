@@ -94,6 +94,10 @@ func main() {
 				r.Use(tenantScope)
 				handler.AiProviders(r, q)
 			})
+			r.Route("/{tenantId}/rate-limit-policies", func(r chi.Router) {
+				r.Use(tenantScope)
+				handler.RateLimitPolicies(r, q)
+			})
 		})
 	})
 
