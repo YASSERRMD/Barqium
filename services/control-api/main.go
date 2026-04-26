@@ -80,6 +80,10 @@ func main() {
 				r.Use(tenantScope)
 				handler.Routes(r, q)
 			})
+			r.Route("/{tenantId}/config/checkpoints", func(r chi.Router) {
+				r.Use(tenantScope)
+				handler.Checkpoints(r, q)
+			})
 		})
 	})
 
