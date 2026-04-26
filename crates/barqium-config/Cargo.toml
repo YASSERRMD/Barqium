@@ -1,0 +1,11 @@
+[package]
+name        = "barqium-config"
+description = "Shared-memory snapshot types for the Barqium data plane."
+version.workspace   = true
+edition.workspace   = true
+authors.workspace   = true
+license.workspace   = true
+
+[dependencies]
+rkyv  = { workspace = true }
+serde = { workspace = true }

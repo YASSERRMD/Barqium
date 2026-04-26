@@ -1,0 +1,86 @@
+[workspace]
+resolver = "2"
+members  = [
+    "crates/barqium",
+    "crates/barqium-config",
+    "crates/barqium-core",
+    "crates/barqium-protocols",
+    "crates/barqium-policy",
+    "crates/barqium-ai",
+    "crates/barqium-mcp",
+    "crates/barqium-snapshot",
+    "crates/barqium-telemetry",
+]
+
+[workspace.package]
+version    = "0.1.0"
+edition    = "2021"
+authors    = ["YASSERRMD <arafath.yasser@gmail.com>"]
+license    = "Apache-2.0"
+repository = "https://github.com/yasserrmd/barqium"
+
+# ---------------------------------------------------------------------------
+# Shared dependency versions — individual crates opt-in with { workspace = true }
+# ---------------------------------------------------------------------------
+[workspace.dependencies]
+# Async runtime
+tokio      = { version = "1", features = ["full"] }
+tokio-util = { version = "0.7" }
+
+# HTTP stack
+hyper          = { version = "1", features = ["full"] }
+hyper-util     = { version = "0.1", features = ["tokio"] }
+http           = { version = "1" }
+http-body-util = { version = "0.1" }
+tower          = { version = "0.4", features = ["full"] }
+tower-service  = { version = "0.3" }
+
+# TLS
+rustls         = { version = "0.23" }
+tokio-rustls   = { version = "0.26" }
+rustls-pemfile = { version = "2" }
+
+# Serialization and shared-memory
+serde      = { version = "1", features = ["derive"] }
+serde_json = { version = "1" }
+prost      = { version = "0.13" }
+rkyv       = { version = "0.7", features = ["validation"] }
+mmap-sync  = { version = "2" }
+bytes      = { version = "1" }
+
+# Messaging
+rdkafka = { version = "0.36", features = ["tokio"] }
+
+# Distributed state
+redis = { version = "0.25", features = ["tokio-comp", "connection-manager"] }
+
+# HTTP client (JWKS fetch, webhook calls)
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+
+# Auth
+jsonwebtoken = { version = "9" }
+ring         = { version = "0.17" }
+
+# Telemetry
+tracing               = { version = "0.1" }
+tracing-subscriber    = { version = "0.3", features = ["env-filter", "json"] }
+opentelemetry         = { version = "0.24" }
+opentelemetry-otlp    = { version = "0.17", default-features = false }
+opentelemetry_sdk     = { version = "0.24", features = ["rt-tokio"] }
+tracing-opentelemetry = { version = "0.25" }
+
+# Error handling
+thiserror = { version = "1" }
+anyhow    = { version = "1" }
+
+# Utilities
+uuid      = { version = "1", features = ["v4", "serde"] }
+chrono    = { version = "0.4", features = ["serde"] }
+futures   = { version = "0.3" }
+dashmap   = { version = "6" }
+arc-swap  = { version = "1" }
+once_cell = { version = "1" }
+
+# Testing and benchmarks
+proptest  = { version = "1" }
+criterion = { version = "0.5", features = ["html_reports"] }

@@ -1,0 +1,22 @@
+[package]
+name        = "barqium-telemetry"
+description = "OTLP exporter and Kafka producer for Barqium request telemetry."
+version.workspace   = true
+edition.workspace   = true
+authors.workspace   = true
+license.workspace   = true
+
+[dependencies]
+tokio                = { workspace = true }
+tracing              = { workspace = true }
+tracing-subscriber   = { workspace = true }
+tracing-opentelemetry = { workspace = true }
+opentelemetry        = { workspace = true }
+opentelemetry_sdk    = { workspace = true }
+opentelemetry-otlp   = { workspace = true, features = ["http-proto", "reqwest-client"] }
+prost                = { workspace = true }
+rdkafka              = { workspace = true }
+thiserror            = { workspace = true }
+
+[build-dependencies]
+prost-build = "0.13"

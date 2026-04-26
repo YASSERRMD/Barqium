@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: ["phase_*", "fix_*"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  rust:
+    name: Rust check, fmt, clippy, test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo fmt --all -- --check
+      - run: cargo clippy --all-targets -- -D warnings
+      - run: cargo test --workspace
+
+  go:
+    name: Go vet and test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+      - run: go vet ./...
+        working-directory: services/control-api
+      - run: go test ./...
+        working-directory: services/control-api
+      - run: go vet ./...
+        working-directory: services/outbox-worker
+      - run: go test ./...
+        working-directory: services/outbox-worker
+
+  ui:
+    name: UI type-check and test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npm ci
+        working-directory: ui/admin
+      - run: npm run build
+        working-directory: ui/admin

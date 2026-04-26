@@ -1,0 +1,9 @@
+[package]
+name        = "barqium-ai"
+description = "Unified AI provider abstraction: OpenAI, Anthropic, Bedrock, Groq, Ollama, vLLM."
+version.workspace   = true
+edition.workspace   = true
+authors.workspace   = true
+license.workspace   = true
+
+[dependencies]

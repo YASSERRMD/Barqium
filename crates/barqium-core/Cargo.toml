@@ -1,0 +1,22 @@
+[package]
+name        = "barqium-core"
+description = "Barqium HTTP/1.1 proxy runtime: listener, route matcher, upstream forwarder."
+version.workspace   = true
+edition.workspace   = true
+authors.workspace   = true
+license.workspace   = true
+
+[dependencies]
+barqium-config     = { path = "../barqium-config" }
+tokio              = { workspace = true }
+hyper              = { workspace = true }
+hyper-util         = { workspace = true, features = ["client", "client-legacy", "http1", "tokio"] }
+http               = { workspace = true }
+http-body-util     = { workspace = true }
+tower              = { workspace = true }
+tower-service      = { workspace = true }
+bytes              = { workspace = true }
+futures            = { workspace = true }
+mmap-sync          = { workspace = true }
+thiserror          = { workspace = true }
+tracing            = { workspace = true }

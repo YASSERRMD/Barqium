@@ -1,0 +1,30 @@
+[package]
+name        = "barqium-snapshot"
+description = "Snapshot compiler: consumes Kafka config events and writes shared-memory snapshots."
+version.workspace   = true
+edition.workspace   = true
+authors.workspace   = true
+license.workspace   = true
+
+[[bin]]
+name = "barqium-snapshot"
+path = "src/main.rs"
+
+[dependencies]
+barqium-config     = { path = "../barqium-config" }
+tokio              = { workspace = true }
+rdkafka            = { workspace = true }
+prost              = { workspace = true }
+rkyv               = { workspace = true }
+serde              = { workspace = true }
+serde_json         = { workspace = true }
+thiserror          = { workspace = true }
+anyhow             = { workspace = true }
+tracing            = { workspace = true }
+tracing-subscriber = { workspace = true }
+bytes              = { workspace = true }
+dashmap            = { workspace = true }
+mmap-sync          = { workspace = true }
+
+[build-dependencies]
+prost-build = "0.13"
