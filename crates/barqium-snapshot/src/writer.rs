@@ -1,33 +1,57 @@
-use std::path::Path;
+use std::collections::HashMap;
+use std::ffi::OsString;
+use std::path::{Path, PathBuf};
+use std::time::Duration;
 
 use barqium_config::RouteSnapshot;
-use rkyv::ser::{serializers::AllocSerializer, Serializer};
+use mmap_sync::synchronizer::Synchronizer;
+use tracing::debug;
 
-/// Serialises snapshot with rkyv and writes to <dir>/<tenant_id>.snapshot.
-/// In P1-T10 this will be upgraded to mmap-sync atomic swap.
-pub fn write_snapshot(dir: &str, snapshot: &RouteSnapshot) -> anyhow::Result<()> {
-    let bytes = to_rkyv_bytes(snapshot)?;
-    let path = Path::new(dir).join(format!("{}.snapshot", snapshot.tenant_id));
+/// Grace period given to in-flight readers before the old mapping is unmapped.
+/// 10ms matches the budget Cloudflare uses in the BLISS pattern.
+const GRACE: Duration = Duration::from_millis(10);
 
-    // Ensure the directory exists.
-    std::fs::create_dir_all(dir)?;
-    std::fs::write(&path, &bytes)?;
-
-    tracing::debug!(
-        tenant_id = %snapshot.tenant_id,
-        sequence  = snapshot.sequence,
-        bytes     = bytes.len(),
-        path      = %path.display(),
-        "snapshot written"
-    );
-    Ok(())
+/// Owns one `Synchronizer` per tenant rooted at `snapshot_dir`.
+/// The synchronizer maintains the two-file ring and the pointer file that
+/// implements the wait-free atomic-swap protocol.
+pub struct SnapshotStore {
+    dir: PathBuf,
+    inner: HashMap<String, Synchronizer>,
 }
 
-/// Serialises a RouteSnapshot into rkyv-archived bytes.
-pub fn to_rkyv_bytes(snapshot: &RouteSnapshot) -> anyhow::Result<Vec<u8>> {
-    let mut serializer = AllocSerializer::<4096>::default();
-    serializer
-        .serialize_value(snapshot)
-        .map_err(|e| anyhow::anyhow!("rkyv serialize error: {e:?}"))?;
-    Ok(serializer.into_serializer().into_inner().to_vec())
+impl SnapshotStore {
+    pub fn new(snapshot_dir: impl AsRef<Path>) -> anyhow::Result<Self> {
+        let dir = snapshot_dir.as_ref().to_path_buf();
+        std::fs::create_dir_all(&dir)?;
+        Ok(Self {
+            dir,
+            inner: HashMap::new(),
+        })
+    }
+
+    /// Atomically replaces the snapshot for `snapshot.tenant_id`.
+    /// Readers on the data plane see the new version within GRACE ms.
+    pub fn write(&mut self, snapshot: &RouteSnapshot) -> anyhow::Result<()> {
+        let dir = &self.dir;
+        let sync = self
+            .inner
+            .entry(snapshot.tenant_id.clone())
+            .or_insert_with(|| {
+                let prefix: OsString = dir.join(&snapshot.tenant_id).into_os_string();
+                Synchronizer::new(&prefix)
+            });
+
+        let (bytes, swapped) = sync
+            .write(snapshot, GRACE)
+            .map_err(|e| anyhow::anyhow!("mmap-sync write: {e:?}"))?;
+
+        debug!(
+            tenant_id = %snapshot.tenant_id,
+            sequence  = snapshot.sequence,
+            bytes,
+            swapped,
+            "snapshot written via mmap-sync atomic swap"
+        );
+        Ok(())
+    }
 }

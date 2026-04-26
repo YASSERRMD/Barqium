@@ -11,7 +11,7 @@ use tracing::{error, info, warn};
 use crate::config::Config;
 use crate::proto::config::ConfigEvent;
 use crate::state::TenantState;
-use crate::writer::write_snapshot;
+use crate::writer::SnapshotStore;
 
 pub type SharedState = Arc<Mutex<HashMap<String, TenantState>>>;
 
@@ -28,28 +28,34 @@ pub fn build_consumer(cfg: &Config) -> anyhow::Result<StreamConsumer> {
     Ok(consumer)
 }
 
-/// Polls the config.changes topic, applies events to the shared state,
-/// and re-writes the snapshot for the affected tenant after each event.
+/// Polls config.changes, applies events to the shared state, and atomically
+/// writes the updated snapshot for the affected tenant on every change.
 pub async fn run(cfg: Arc<Config>, consumer: StreamConsumer, state: SharedState) {
     info!(
         topic  = %cfg.config_topic,
         group  = %cfg.kafka_group_id,
+        dir    = %cfg.snapshot_dir,
         "snapshot consumer started"
     );
+
+    let mut store = match SnapshotStore::new(&cfg.snapshot_dir) {
+        Ok(s) => s,
+        Err(e) => {
+            error!("failed to initialise snapshot store: {e}");
+            return;
+        }
+    };
 
     loop {
         match consumer.recv().await {
             Err(e) => {
                 error!("kafka recv error: {e}");
-                // Back off briefly to avoid tight error loops.
                 tokio::time::sleep(std::time::Duration::from_millis(500)).await;
             }
             Ok(msg) => {
                 let Some(bytes) = msg.payload() else {
                     warn!("received empty kafka message; skipping");
-                    if let Err(e) = consumer.commit_message(&msg, CommitMode::Async) {
-                        error!("commit error: {e}");
-                    }
+                    commit(&consumer, &msg);
                     continue;
                 };
 
@@ -68,19 +74,21 @@ pub async fn run(cfg: Arc<Config>, consumer: StreamConsumer, state: SharedState)
                             tenant.to_snapshot()
                         };
 
-                        if let Err(e) = write_snapshot(&cfg.snapshot_dir, &snapshot) {
-                            error!(
-                                tenant_id = %tenant_id,
-                                "failed to write snapshot: {e}"
-                            );
+                        if let Err(e) = store.write(&snapshot) {
+                            error!(tenant_id = %tenant_id, "snapshot write failed: {e}");
                         }
                     }
                 }
 
-                if let Err(e) = consumer.commit_message(&msg, CommitMode::Async) {
-                    error!("kafka commit error: {e}");
-                }
+                commit(&consumer, &msg);
             }
         }
+    }
+}
+
+#[inline]
+fn commit(consumer: &StreamConsumer, msg: &rdkafka::message::BorrowedMessage<'_>) {
+    if let Err(e) = consumer.commit_message(msg, CommitMode::Async) {
+        error!("kafka commit error: {e}");
     }
 }
