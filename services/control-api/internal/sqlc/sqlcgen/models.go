@@ -101,6 +101,17 @@ type AiProvider struct {
 	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
 }
 
+type Region struct {
+	ID           uuid.UUID `db:"id" json:"id"`
+	Name         string    `db:"name" json:"name"`
+	KafkaBrokers string    `db:"kafka_brokers" json:"kafka_brokers"`
+	IsPrimary    bool      `db:"is_primary" json:"is_primary"`
+	Mm2GroupID   *string   `db:"mm2_group_id" json:"mm2_group_id,omitempty"`
+	Enabled      bool      `db:"enabled" json:"enabled"`
+	CreatedAt    time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt    time.Time `db:"updated_at" json:"updated_at"`
+}
+
 type AiModelPolicy struct {
 	ID                  uuid.UUID `db:"id" json:"id"`
 	TenantID            uuid.UUID `db:"tenant_id" json:"tenant_id"`

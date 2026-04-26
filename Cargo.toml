@@ -11,6 +11,7 @@ members  = [
     "crates/barqium-snapshot",
     "crates/barqium-telemetry",
     "crates/barqium-wasm",
+    "crates/barqium-xdp",
 ]
 
 [workspace.package]
@@ -107,8 +108,10 @@ arc-swap  = { version = "1" }
 once_cell = { version = "1" }
 
 # Cryptographic hashing (SHA-256 for GraphQL persisted queries etc.)
-sha2 = { version = "0.10" }
-hex  = { version = "0.4" }
+sha2    = { version = "0.10" }
+hex     = { version = "0.4" }
+# Low-level socket options (SO_REUSEPORT for XDP / multi-listener)
+socket2 = { version = "0.5", features = ["all"] }
 
 # Testing and benchmarks
 proptest  = { version = "1" }

@@ -1,0 +1,21 @@
+[package]
+name        = "barqium-xdp"
+description = "BPF/XDP fastest-path scaffold: aya integration and SO_REUSEPORT helpers."
+version.workspace   = true
+edition.workspace   = true
+authors.workspace   = true
+license.workspace   = true
+
+[dependencies]
+thiserror = { workspace = true }
+tracing   = { workspace = true }
+socket2   = { workspace = true }
+
+# aya is optional: only needed when building the XDP loader.
+# Exclude on non-Linux targets where XDP is unavailable.
+[target.'cfg(target_os = "linux")'.dependencies]
+aya = { version = "0.13", optional = true }
+
+[features]
+default = []
+xdp     = ["dep:aya"]

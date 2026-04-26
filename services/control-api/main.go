@@ -64,6 +64,11 @@ func main() {
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Use(oidcMiddleware)
 
+		r.Route("/regions", func(r chi.Router) {
+			r.Use(adminOnly)
+			handler.Regions(r, q)
+		})
+
 		r.Route("/tenants", func(r chi.Router) {
 			// Create and delete tenant are admin-only; reads are open to any valid token.
 			r.With(adminOnly).Post("/", handler.CreateTenantHandler(q))
