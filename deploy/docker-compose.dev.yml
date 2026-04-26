@@ -13,6 +13,10 @@ version: "3.9"
 #   audit-consumer  - Go audit event Kafka consumer -> Postgres sink
 #   snapshot        - Rust snapshot compiler (Kafka -> /dev/shm)
 #   dataplane       - Rust HTTP proxy (reads /dev/shm)
+#
+# Phase 3 AI/MCP additions (library crates; no new processes in dev):
+#   barqium-ai      - linked into dataplane; set provider API key env vars below
+#   barqium-mcp     - linked into dataplane; MCP server addr configured per-route
 
 networks:
   barqium:
@@ -234,6 +238,19 @@ services:
       OTLP_ENDPOINT:  http://jaeger:4318
       SERVICE_NAME:   barqium-dataplane
       REDIS_URL:      redis://redis:6379
+      # AI provider API keys — leave empty to disable each provider in dev.
+      # Set the env var to the actual key value (never commit real keys).
+      OPENAI_API_KEY:    ""
+      ANTHROPIC_API_KEY: ""
+      GROQ_API_KEY:      ""
+      # Ollama runs locally by default; set a custom base URL if needed.
+      OLLAMA_BASE_URL:   "http://host.docker.internal:11434"
+      # AWS Bedrock credentials (SigV4 signing); leave empty to disable.
+      AWS_ACCESS_KEY_ID:     ""
+      AWS_SECRET_ACCESS_KEY: ""
+      AWS_REGION:            "us-east-1"
+      # MCP server registry config — leave empty to disable in dev.
+      MCP_REGISTRY_PATH: ""
       # TLS/mTLS: set these to enable; leave empty for plain HTTP in dev.
       TLS_CERT:       ""
       TLS_KEY:        ""

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Phase 2 end-to-end smoke test.
+# Phase 3 end-to-end smoke test (superset of Phase 2 checks).
 #
 # Prerequisites:
 #   - docker compose stack is up: docker compose -f deploy/docker-compose.dev.yml up -d
@@ -196,6 +196,65 @@ if command -v rpk &>/dev/null; then
   fi
 else
   echo "    SKIP: rpk not installed; cannot verify audit.events topic"
+fi
+
+# ---------------------------------------------------------------------------
+step "14. Create AI provider config (Phase 3: AI provider registry)"
+# ---------------------------------------------------------------------------
+AI_PROVIDER=$(curl -fsS -X POST \
+  "$CONTROL_API/api/v1/tenants/$TENANT_ID/ai/providers" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"smoke-openai","provider":"openai","api_key_env":"OPENAI_API_KEY"}')
+AI_PROVIDER_ID=$(echo "$AI_PROVIDER" | jq -r '.id')
+if [ -n "$AI_PROVIDER_ID" ] && [ "$AI_PROVIDER_ID" != "null" ]; then
+  ok "AI provider created: id=$AI_PROVIDER_ID name=smoke-openai"
+else
+  fail "AI provider creation failed: $AI_PROVIDER"
+fi
+
+# ---------------------------------------------------------------------------
+step "15. Create model policy for AI provider (Phase 3: token budget)"
+# ---------------------------------------------------------------------------
+if [ -n "$AI_PROVIDER_ID" ] && [ "$AI_PROVIDER_ID" != "null" ]; then
+  MODEL_POLICY=$(curl -fsS -X POST \
+    "$CONTROL_API/api/v1/tenants/$TENANT_ID/ai/providers/$AI_PROVIDER_ID/model-policies" \
+    -H "Content-Type: application/json" \
+    -d '{"model":"gpt-4o","max_tokens_per_request":2048,"budget_usd_per_day":"5.0000"}')
+  MODEL_POLICY_ID=$(echo "$MODEL_POLICY" | jq -r '.id')
+  if [ -n "$MODEL_POLICY_ID" ] && [ "$MODEL_POLICY_ID" != "null" ]; then
+    ok "model policy created: id=$MODEL_POLICY_ID model=gpt-4o"
+  else
+    fail "model policy creation failed: $MODEL_POLICY"
+  fi
+else
+  echo "    SKIP: AI provider creation failed; skipping model policy check"
+fi
+
+# ---------------------------------------------------------------------------
+step "16. List AI providers for tenant"
+# ---------------------------------------------------------------------------
+AI_PROVIDERS=$(curl -fsS \
+  "$CONTROL_API/api/v1/tenants/$TENANT_ID/ai/providers")
+AI_COUNT=$(echo "$AI_PROVIDERS" | jq 'length')
+if [ "${AI_COUNT:-0}" -ge 1 ]; then
+  ok "AI providers list returned $AI_COUNT entry(ies)"
+else
+  fail "AI providers list is empty or failed: $AI_PROVIDERS"
+fi
+
+# ---------------------------------------------------------------------------
+step "17. Check telemetry.llm topic exists (Phase 3: LLM token telemetry)"
+# ---------------------------------------------------------------------------
+if command -v rpk &>/dev/null; then
+  TOPIC_INFO=$(rpk topic describe telemetry.llm \
+    --brokers="$KAFKA_BROKERS" 2>/dev/null || echo "")
+  if [ -n "$TOPIC_INFO" ]; then
+    ok "telemetry.llm topic exists"
+  else
+    fail "telemetry.llm topic not found"
+  fi
+else
+  echo "    SKIP: rpk not installed; cannot verify telemetry.llm topic"
 fi
 
 # ---------------------------------------------------------------------------
