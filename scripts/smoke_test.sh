@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Phase 3 end-to-end smoke test (superset of Phase 2 checks).
+# Phase 4 end-to-end smoke test (superset of Phase 3 checks).
 #
 # Prerequisites:
 #   - docker compose stack is up: docker compose -f deploy/docker-compose.dev.yml up -d
@@ -255,6 +255,91 @@ if command -v rpk &>/dev/null; then
   fi
 else
   echo "    SKIP: rpk not installed; cannot verify telemetry.llm topic"
+fi
+
+# ---------------------------------------------------------------------------
+step "18. Create a region (Phase 4: cross-region control plane)"
+# ---------------------------------------------------------------------------
+REGION=$(curl -fsS -X POST "$CONTROL_API/api/v1/regions" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"us-east-1","kafka_brokers":"redpanda:29092","is_primary":true}' \
+  2>/dev/null || echo '{}')
+REGION_ID=$(echo "$REGION" | jq -r '.id // empty')
+if [ -n "$REGION_ID" ]; then
+  ok "region created: id=$REGION_ID name=us-east-1"
+else
+  fail "region creation failed: $REGION"
+fi
+
+# ---------------------------------------------------------------------------
+step "19. Create a rate limit policy (Phase 4: rate limit CRUD)"
+# ---------------------------------------------------------------------------
+RL_POLICY=$(curl -fsS -X POST \
+  "$CONTROL_API/api/v1/tenants/$TENANT_ID/rate-limit-policies" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"smoke-rl","scope":"tenant","algorithm":"sliding_window","rate_limit":1000,"window_secs":60}')
+RL_POLICY_ID=$(echo "$RL_POLICY" | jq -r '.id // empty')
+if [ -n "$RL_POLICY_ID" ]; then
+  ok "rate limit policy created: id=$RL_POLICY_ID name=smoke-rl"
+else
+  fail "rate limit policy creation failed: $RL_POLICY"
+fi
+
+# ---------------------------------------------------------------------------
+step "20. List rate limit policies"
+# ---------------------------------------------------------------------------
+RL_POLICIES=$(curl -fsS "$CONTROL_API/api/v1/tenants/$TENANT_ID/rate-limit-policies")
+RL_COUNT=$(echo "$RL_POLICIES" | jq 'length')
+if [ "${RL_COUNT:-0}" -ge 1 ]; then
+  ok "rate limit policies list returned $RL_COUNT entry(ies)"
+else
+  fail "rate limit policies list is empty or failed: $RL_POLICIES"
+fi
+
+# ---------------------------------------------------------------------------
+step "21. Register a WASM plugin (storage_url backed) (Phase 4: WASM registry)"
+# ---------------------------------------------------------------------------
+WASM_PLUGIN=$(curl -fsS -X POST \
+  "$CONTROL_API/api/v1/tenants/$TENANT_ID/wasm-plugins" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name":"smoke-auth-plugin",
+    "version":"0.1.0",
+    "trigger":"on_request",
+    "storage_url":"s3://barqium-plugins/smoke-auth-plugin-0.1.0.wasm",
+    "config":{"validate_jwt":"false"}
+  }')
+WASM_PLUGIN_ID=$(echo "$WASM_PLUGIN" | jq -r '.id // empty')
+if [ -n "$WASM_PLUGIN_ID" ]; then
+  ok "WASM plugin registered: id=$WASM_PLUGIN_ID name=smoke-auth-plugin"
+else
+  fail "WASM plugin registration failed: $WASM_PLUGIN"
+fi
+
+# ---------------------------------------------------------------------------
+step "22. List WASM plugins"
+# ---------------------------------------------------------------------------
+WASM_PLUGINS=$(curl -fsS "$CONTROL_API/api/v1/tenants/$TENANT_ID/wasm-plugins")
+WASM_COUNT=$(echo "$WASM_PLUGINS" | jq 'length')
+if [ "${WASM_COUNT:-0}" -ge 1 ]; then
+  ok "WASM plugins list returned $WASM_COUNT entry(ies)"
+else
+  fail "WASM plugins list is empty or failed: $WASM_PLUGINS"
+fi
+
+# ---------------------------------------------------------------------------
+step "23. Check telemetry.access topic exists (Phase 4: structured access logs)"
+# ---------------------------------------------------------------------------
+if command -v rpk &>/dev/null; then
+  TOPIC_INFO=$(rpk topic describe telemetry.access \
+    --brokers="$KAFKA_BROKERS" 2>/dev/null || echo "")
+  if [ -n "$TOPIC_INFO" ]; then
+    ok "telemetry.access topic exists"
+  else
+    fail "telemetry.access topic not found"
+  fi
+else
+  echo "    SKIP: rpk not installed; cannot verify telemetry.access topic"
 fi
 
 # ---------------------------------------------------------------------------

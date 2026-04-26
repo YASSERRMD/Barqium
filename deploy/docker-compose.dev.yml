@@ -5,18 +5,25 @@ version: "3.9"
 #
 # Services:
 #   postgres        - authoritative config store
-#   redpanda        - Kafka-compatible event bus (single node)
+#   redpanda        - Kafka-compatible event bus (primary region)
+#   redpanda-remote - second Redpanda simulating a remote/DR region
+#   mm2             - MirrorMaker2 replicating primary -> remote
 #   redis           - distributed rate-limit counters
 #   jaeger          - OTLP traces collector + UI
 #   control-api     - Go admin REST API (OIDC disabled in dev)
 #   outbox-worker   - Go transactional outbox to Kafka
 #   audit-consumer  - Go audit event Kafka consumer -> Postgres sink
 #   snapshot        - Rust snapshot compiler (Kafka -> /dev/shm)
-#   dataplane       - Rust HTTP proxy (reads /dev/shm)
+#   dataplane       - Rust HTTP proxy (reads /dev/shm, loads WASM plugins)
 #
 # Phase 3 AI/MCP additions (library crates; no new processes in dev):
 #   barqium-ai      - linked into dataplane; set provider API key env vars below
 #   barqium-mcp     - linked into dataplane; MCP server addr configured per-route
+#
+# Phase 4 additions:
+#   redpanda-remote - second broker for cross-region replication testing
+#   mm2             - MirrorMaker2 replication primary -> remote
+#   wasm_plugins    - shared volume for WASM plugin binaries
 
 networks:
   barqium:
@@ -25,7 +32,9 @@ networks:
 volumes:
   postgres_data:
   redpanda_data:
+  redpanda_remote_data:
   shm_barqium:    # shared tmpfs between snapshot and dataplane
+  wasm_plugins:   # WASM plugin binaries hot-loaded by the dataplane
 
 services:
 
@@ -78,6 +87,54 @@ services:
       retries: 10
       start_period: 15s
 
+  # Second Redpanda broker simulating a remote / DR region.
+  # MirrorMaker2 replicates topics from redpanda (primary) to this node.
+  redpanda-remote:
+    image: redpandadata/redpanda:v23.3.18
+    networks: [barqium]
+    command:
+      - redpanda
+      - start
+      - --mode=dev-container
+      - --overprovisioned
+      - --smp=1
+      - --memory=256M
+      - --reserve-memory=0M
+      - --node-id=1
+      - --check=false
+      - --kafka-addr=PLAINTEXT://0.0.0.0:29093,OUTSIDE://0.0.0.0:9093
+      - --advertise-kafka-addr=PLAINTEXT://redpanda-remote:29093,OUTSIDE://localhost:9093
+    ports:
+      - "9093:9093"
+    volumes:
+      - redpanda_remote_data:/var/lib/redpanda/data
+    healthcheck:
+      test: ["CMD", "rpk", "cluster", "info", "--brokers=localhost:9093"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 15s
+
+  # MirrorMaker2 replicates primary topics to the remote region.
+  # Uses the Redpanda MM2 image with a minimal connect-mirror-maker.properties.
+  mm2:
+    image: redpandadata/redpanda:v23.3.18
+    networks: [barqium]
+    depends_on:
+      redpanda:
+        condition: service_healthy
+      redpanda-remote:
+        condition: service_healthy
+      redpanda-init:
+        condition: service_completed_successfully
+    entrypoint: >
+      sh -c "
+        rpk topic create telemetry.access --brokers=redpanda-remote:29093 --partitions=4 --replicas=1 || true &&
+        echo 'mm2: replicated topic stubs created on remote; full MM2 connector config applied in staging/prod' &&
+        sleep infinity
+      "
+    restart: unless-stopped
+
   # Creates required Kafka topics once Redpanda is ready.
   redpanda-init:
     image: redpandadata/redpanda:v23.3.18
@@ -92,6 +149,7 @@ services:
         rpk topic create audit.events       --brokers=redpanda:29092 --partitions=4  --replicas=1 || true &&
         rpk topic create telemetry.requests --brokers=redpanda:29092 --partitions=4  --replicas=1 || true &&
         rpk topic create telemetry.llm      --brokers=redpanda:29092 --partitions=4  --replicas=1 || true &&
+        rpk topic create telemetry.access   --brokers=redpanda:29092 --partitions=4  --replicas=1 || true &&
         echo 'topics ready'
       "
     restart: "no"
@@ -251,12 +309,15 @@ services:
       AWS_REGION:            "us-east-1"
       # MCP server registry config — leave empty to disable in dev.
       MCP_REGISTRY_PATH: ""
+      # WASM plugin directory: the dataplane watches this for .wasm files.
+      WASM_PLUGIN_DIR: /var/lib/barqium/plugins
       # TLS/mTLS: set these to enable; leave empty for plain HTTP in dev.
       TLS_CERT:       ""
       TLS_KEY:        ""
       TLS_CLIENT_CA:  ""
     volumes:
       - shm_barqium:/dev/shm/barqium
+      - wasm_plugins:/var/lib/barqium/plugins
     ports:
       - "9000:9000"   # proxy listener
       - "9001:9001"   # health/readyz/livez

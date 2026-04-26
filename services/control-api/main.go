@@ -64,6 +64,11 @@ func main() {
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Use(oidcMiddleware)
 
+		r.Route("/regions", func(r chi.Router) {
+			r.Use(adminOnly)
+			handler.Regions(r, q)
+		})
+
 		r.Route("/tenants", func(r chi.Router) {
 			// Create and delete tenant are admin-only; reads are open to any valid token.
 			r.With(adminOnly).Post("/", handler.CreateTenantHandler(q))
@@ -88,6 +93,14 @@ func main() {
 			r.Route("/{tenantId}/ai/providers", func(r chi.Router) {
 				r.Use(tenantScope)
 				handler.AiProviders(r, q)
+			})
+			r.Route("/{tenantId}/rate-limit-policies", func(r chi.Router) {
+				r.Use(tenantScope)
+				handler.RateLimitPolicies(r, q)
+			})
+			r.Route("/{tenantId}/wasm-plugins", func(r chi.Router) {
+				r.Use(tenantScope)
+				handler.WasmPlugins(r, q)
 			})
 		})
 	})

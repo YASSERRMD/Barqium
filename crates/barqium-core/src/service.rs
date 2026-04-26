@@ -55,7 +55,7 @@ impl hyper::service::Service<Request<Incoming>> for ProxyService {
             // Route lookup: lock briefly, then release before I/O.
             let route_match = {
                 let mut guard = reader.lock().await;
-                match guard.match_route(&method, &path, &host) {
+                match guard.match_route(&method, &path, &host, None) {
                     Ok(Some(m)) => m,
                     Ok(None) => {
                         return Ok(status_response(StatusCode::NOT_FOUND, "no route matched\n"))

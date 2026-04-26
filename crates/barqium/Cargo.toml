@@ -11,7 +11,33 @@ name = "barqium"
 path = "src/main.rs"
 
 [dependencies]
-tokio     = { workspace = true }
-anyhow    = { workspace = true }
-tracing   = { workspace = true }
+tokio              = { workspace = true }
+anyhow             = { workspace = true }
+tracing            = { workspace = true }
 tracing-subscriber = { workspace = true }
+barqium-core       = { path = "../barqium-core" }
+barqium-wasm       = { path = "../barqium-wasm", optional = true }
+barqium-ai         = { path = "../barqium-ai", optional = true }
+barqium-mcp        = { path = "../barqium-mcp", optional = true }
+barqium-protocols  = { path = "../barqium-protocols", optional = true }
+# aws-lc-rs TLS acceleration: swap rustls crypto provider to AWS-LC
+aws-lc-rs          = { workspace = true, optional = true }
+
+# ---------------------------------------------------------------------------
+# Feature flags
+# ---------------------------------------------------------------------------
+# default  : full feature set (recommended for production)
+# full     : synonym for default; explicit opt-in alias
+# edge     : stripped profile for IoT / resource-constrained nodes
+#            — disables WASM, AI, MCP, and protocol extensions
+# aws-lc   : replace the default rustls ring backend with AWS-LC-RS for
+#            AVX-512-accelerated AES-GCM / ECDSA operations
+[features]
+default = ["full"]
+full    = ["wasm", "ai", "mcp", "protocols"]
+wasm      = ["dep:barqium-wasm"]
+ai        = ["dep:barqium-ai"]
+mcp       = ["dep:barqium-mcp"]
+protocols = ["dep:barqium-protocols"]
+edge    = []
+aws-lc  = ["dep:aws-lc-rs", "barqium-core/aws-lc"]

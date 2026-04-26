@@ -7,6 +7,7 @@ Cargo.lock
 # Go
 vendor/
 *.exe
+go.work.sum
 
 # Node / UI
 ui/admin/node_modules/
@@ -34,6 +35,8 @@ Thumbs.db
 # Tooling state
 .mise.toml.local
 .direnv/
+memory/
+tmp/
 
 # Build artefacts
 deploy/helm/*.tgz

@@ -10,6 +10,8 @@ members  = [
     "crates/barqium-mcp",
     "crates/barqium-snapshot",
     "crates/barqium-telemetry",
+    "crates/barqium-wasm",
+    "crates/barqium-xdp",
 ]
 
 [workspace.package]
@@ -79,6 +81,24 @@ async-trait = { version = "0.1" }
 # HNSW approximate nearest-neighbour index for semantic cache
 instant-distance = { version = "0.6" }
 
+# HTTP/3 (QUIC) stack
+# h3-quinn is excluded: both 0.0.6 and 0.0.7 have a StreamId private-field
+# incompatibility with quinn 0.11.x. QUIC transport is implemented via quinn
+# directly; H3 framing will be added when h3-quinn publishes a fix.
+quinn = { version = "0.11", features = ["rustls"] }
+
+# WASM plugin runtime
+wasmtime = { version = "25", default-features = false, features = ["cranelift", "component-model", "async"] }
+
+# File-system watcher for WASM hot reload
+notify = { version = "6" }
+
+# XML parsing for SOAP mediation
+quick-xml = { version = "0.36", features = ["serialize"] }
+
+# TLS acceleration (optional in individual crates — AWS-LC FIPS-compliant crypto)
+aws-lc-rs = { version = "1" }
+
 # Utilities
 uuid      = { version = "1", features = ["v4", "serde"] }
 chrono    = { version = "0.4", features = ["serde"] }
@@ -86,6 +106,12 @@ futures   = { version = "0.3" }
 dashmap   = { version = "6" }
 arc-swap  = { version = "1" }
 once_cell = { version = "1" }
+
+# Cryptographic hashing (SHA-256 for GraphQL persisted queries etc.)
+sha2    = { version = "0.10" }
+hex     = { version = "0.4" }
+# Low-level socket options (SO_REUSEPORT for XDP / multi-listener)
+socket2 = { version = "0.5", features = ["all"] }
 
 # Testing and benchmarks
 proptest  = { version = "1" }
