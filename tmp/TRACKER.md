@@ -1,6 +1,6 @@
 # Barqium Build Tracker
 
-**Last updated:** 2026-04-26 09:30 (UTC)
+**Last updated:** 2026-04-26 10:00 (UTC)
 **Current phase:** Phase 2 — Maturity
 **Current branch:** phase_2_maturity
 
@@ -11,7 +11,7 @@
 | Phase | Status | Branch | Started | Merged | Notes |
 |---|---|---|---|---|---|
 | 1 — Foundation | done | phase_1_foundation | 2026-04-26 | 2026-04-26 | 20 of 20 tasks done |
-| 2 — Maturity | in_progress | phase_2_maturity | 2026-04-26 | — | 11 of 20 tasks done |
+| 2 — Maturity | in_progress | phase_2_maturity | 2026-04-26 | — | 13 of 20 tasks done |
 | 3 — AI and MCP | pending | — | — | — | scope to be expanded after P2 merge |
 | 4 — Frontier | pending | — | — | — | rolling phase |
 
@@ -32,8 +32,8 @@
 | P2-T9 | Admin SPA scaffold (React 18 + Vite + Tailwind + shadcn/ui) | done | YASSERRMD | — | passed | |
 | P2-T10 | Admin SPA: OpenAPI client codegen from control-api spec | done | YASSERRMD | — | passed | |
 | P2-T11 | Admin SPA: tenants management page (list + create + delete) | done | YASSERRMD | — | passed | |
-| P2-T12 | Admin SPA: upstreams management page (CRUD per tenant) | pending | — | — | pending | |
-| P2-T13 | Admin SPA: routes management page (CRUD per tenant) | pending | — | — | pending | |
+| P2-T12 | Admin SPA: upstreams management page (CRUD per tenant) | done | YASSERRMD | — | passed | |
+| P2-T13 | Admin SPA: routes management page (CRUD per tenant) | done | YASSERRMD | — | passed | |
 | P2-T14 | Admin SPA: dashboard (gateway health + live request metrics) | pending | — | — | pending | |
 | P2-T15 | Config-version pinning: snapshot sequence tracking + rollback endpoint | pending | — | — | pending | |
 | P2-T16 | Audit topic consumer and Postgres sink (7-year retention) | pending | — | — | pending | |
