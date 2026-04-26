@@ -16,4 +16,5 @@ serde_json   = { workspace = true }
 thiserror    = { workspace = true }
 tokio        = { workspace = true }
 tracing      = { workspace = true }
+url          = { version = "2" }
 uuid         = { workspace = true }
