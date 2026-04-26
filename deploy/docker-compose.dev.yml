@@ -176,6 +176,13 @@ services:
       - shm_barqium:/dev/shm/barqium
     restart: unless-stopped
 
+  # Lightweight echo backend used by the smoke test as a proxied upstream.
+  whoami:
+    image: traefik/whoami:v1.10
+    networks: [barqium]
+    ports:
+      - "9001:80"
+
   dataplane:
     build:
       context: ..
