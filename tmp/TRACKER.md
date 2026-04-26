@@ -1,6 +1,6 @@
 # Barqium Build Tracker
 
-**Last updated:** 2026-04-26 02:00 (UTC)
+**Last updated:** 2026-04-26 04:00 (UTC)
 **Current phase:** Phase 1 — Foundation
 **Current branch:** phase_1_foundation
 
@@ -10,7 +10,7 @@
 
 | Phase | Status | Branch | Started | Merged | Notes |
 |---|---|---|---|---|---|
-| 1 — Foundation | in_progress | phase_1_foundation | 2026-04-26 | — | 13 of 20 tasks done |
+| 1 — Foundation | done | phase_1_foundation | 2026-04-26 | pending PR | 20 of 20 tasks done |
 | 2 — Maturity | pending | — | — | — | scope to be expanded after P1 merge |
 | 3 — AI and MCP | pending | — | — | — | scope to be expanded after P2 merge |
 | 4 — Frontier | pending | — | — | — | rolling phase |
@@ -34,13 +34,13 @@
 | P1-T11 | barqium-core HTTP/1.1 listener with hyper | done | YASSERRMD | df90540 | passed | hyper 1.x serve_connection, TokioIo, PlaceholderService |
 | P1-T12 | barqium-core route matcher reading shared-memory snapshot | done | YASSERRMD | 8c86447 | passed | SnapshotReader, find_route longest-prefix, ProxyService |
 | P1-T13 | barqium-core upstream forwarder with connection pool | done | YASSERRMD | cbd2f73 | passed | Forwarder hyper-util legacy client, hop-by-hop strip, timeout |
-| P1-T14 | barqium-policy JWT validator with JWKS cache | pending | — | — | pending | |
-| P1-T15 | barqium-policy API key validator | pending | — | — | pending | |
-| P1-T16 | barqium-policy sliding-window rate limiter (local) | pending | — | — | pending | |
-| P1-T17 | barqium-telemetry OTLP exporter for traces and metrics | pending | — | — | pending | |
-| P1-T18 | barqium-telemetry Kafka producer for telemetry.requests | pending | — | — | pending | |
-| P1-T19 | docker-compose.dev.yml for local stack | pending | — | — | pending | |
-| P1-T20 | End-to-end smoke test: tenant + route + traffic + telemetry | pending | — | — | pending | |
+| P1-T14 | barqium-policy JWT validator with JWKS cache | done | YASSERRMD | 628b879 | passed | JwksCache ArcSwap + background refresh, RS256/ES256 |
+| P1-T15 | barqium-policy API key validator | done | YASSERRMD | a954b68 | passed | SHA-256 hash store, O(1) lookup, constant-time |
+| P1-T16 | barqium-policy sliding-window rate limiter (local) | done | YASSERRMD | 12eff66 | passed | two-counter approximation, DashMap per-key slots |
+| P1-T17 | barqium-telemetry OTLP exporter for traces and metrics | done | YASSERRMD | ea28677 | passed | BatchSpanExporter HTTP/proto, tracing-subscriber wired |
+| P1-T18 | barqium-telemetry Kafka producer for telemetry.requests | done | YASSERRMD | 044a745 | passed | fire-and-forget FutureProducer, prost encode |
+| P1-T19 | docker-compose.dev.yml for local stack | done | YASSERRMD | 6c7107c | passed | Postgres, Redpanda, Redis, Jaeger, all 4 services |
+| P1-T20 | End-to-end smoke test: tenant + route + traffic + telemetry | done | YASSERRMD | f77c4b3 | passed | scripts/smoke_test.sh; whoami echo backend in compose |
 
 ---
 
@@ -55,6 +55,7 @@ _None._
 ---
 
 ## Recent Decisions (last 5)
+- 2026-04-26: ADR-006 accepted: reqwest for outbound HTTP in Rust (JWKS fetch, webhook delivery).
 - 2026-04-26: ADR-001 through ADR-005 accepted (Rust data plane, Go control plane, mmap-sync, Kafka event bus, transactional outbox, Protobuf 3).
 
 ---
