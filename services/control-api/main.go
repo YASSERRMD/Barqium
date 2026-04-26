@@ -85,6 +85,10 @@ func main() {
 				r.Use(tenantScope)
 				handler.Checkpoints(r, q)
 			})
+			r.Route("/{tenantId}/ai/providers", func(r chi.Router) {
+				r.Use(tenantScope)
+				handler.AiProviders(r, q)
+			})
 		})
 	})
 
