@@ -1,8 +1,8 @@
 # Barqium Build Tracker
 
-**Last updated:** 2026-04-26 14:30 (UTC)
-**Current phase:** Phase 2 — Maturity (complete, pending PR merge)
-**Current branch:** phase_2_maturity
+**Last updated:** 2026-04-26 15:00 (UTC)
+**Current phase:** Phase 3 — AI and MCP
+**Current branch:** phase_3_ai_mcp
 
 ---
 
@@ -12,7 +12,7 @@
 |---|---|---|---|---|---|
 | 1 — Foundation | done | phase_1_foundation | 2026-04-26 | 2026-04-26 | 20 of 20 tasks done |
 | 2 — Maturity | done | phase_2_maturity | 2026-04-26 | — | 20 of 20 tasks done, PR pending |
-| 3 — AI and MCP | pending | — | — | — | scope to be expanded after P2 merge |
+| 3 — AI and MCP | in_progress | phase_3_ai_mcp | 2026-04-26 | — | 0 of 20 tasks done |
 | 4 — Frontier | pending | — | — | — | rolling phase |
 
 ---
@@ -41,6 +41,33 @@
 | P2-T18 | Blue-green data-plane rollout: health endpoint + graceful connection drain | done | YASSERRMD | — | passed | |
 | P2-T19 | OpenAPI spec generation from control-api (swaggo or huma) | done | YASSERRMD | — | passed | |
 | P2-T20 | Update docker-compose.dev.yml and smoke test for Phase 2 services | done | YASSERRMD | fd5fef2 | passed | |
+
+---
+
+## Active Phase Tasks (Phase 3)
+
+| ID | Task | Status | Owner | Commit | Test Status | Notes |
+|---|---|---|---|---|---|---|
+| P3-T1 | barqium-ai crate: provider trait, request/response types, error types | pending | — | — | pending | |
+| P3-T2 | OpenAI provider: chat completions + streaming (SSE passthrough) | pending | — | — | pending | |
+| P3-T3 | Anthropic provider: messages API + streaming | pending | — | — | pending | |
+| P3-T4 | Groq + Ollama providers (OpenAI-compatible adapters) | pending | — | — | pending | |
+| P3-T5 | Bedrock provider: AWS SigV4 auth + converse API | pending | — | — | pending | |
+| P3-T6 | Token counting: tiktoken-rs for OpenAI, heuristic counter for Claude | pending | — | — | pending | |
+| P3-T7 | Cost ceiling: USD rate table per model, per-request budget enforcement | pending | — | — | pending | |
+| P3-T8 | Fallback chains: ordered provider list with retry-on-error/timeout | pending | — | — | pending | |
+| P3-T9 | Semantic cache: HNSW in-memory index, embedding lookup, cache-hit passthrough | pending | — | — | pending | |
+| P3-T10 | barqium-mcp crate: MCP types (Tool, ToolCall, ToolResult, ServerInfo, capabilities) | pending | — | — | pending | |
+| P3-T11 | MCP client role - HTTP+SSE transport: connect to remote MCP servers | pending | — | — | pending | |
+| P3-T12 | MCP client role - stdio transport: spawn and communicate with local MCP servers | pending | — | — | pending | |
+| P3-T13 | MCP server role: expose Barqium as an MCP server, route tool calls to upstreams | pending | — | — | pending | |
+| P3-T14 | Tool registry: store registered tools in Postgres, CRUD in control-api | pending | — | — | pending | |
+| P3-T15 | Tool-level RBAC: per-tool allow/deny wired into ABAC evaluator | pending | — | — | pending | |
+| P3-T16 | Federated OAuth: per-server OAuth2 client-credentials + PKCE, token auto-refresh | pending | — | — | pending | |
+| P3-T17 | Code Mode progressive disclosure: tool visibility tiers, per-session gate | pending | — | — | pending | |
+| P3-T18 | PII redaction: regex + entity scanner, reversible tokenisation with session key | pending | — | — | pending | |
+| P3-T19 | AI routes in control-api: provider config CRUD, model policies per tenant | pending | — | — | pending | |
+| P3-T20 | Update docker-compose and smoke test for Phase 3 services | pending | — | — | pending | |
 
 ---
 
