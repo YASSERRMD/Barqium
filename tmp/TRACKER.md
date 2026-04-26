@@ -33,7 +33,7 @@
 | P1-T10 | barqium-snapshot atomic-swap protocol on /dev/shm/barqium/ | done | YASSERRMD | 61950c8 | passed | SnapshotStore with per-tenant Synchronizer, 10ms grace |
 | P1-T11 | barqium-core HTTP/1.1 listener with hyper | done | YASSERRMD | df90540 | passed | hyper 1.x serve_connection, TokioIo, PlaceholderService |
 | P1-T12 | barqium-core route matcher reading shared-memory snapshot | done | YASSERRMD | 8c86447 | passed | SnapshotReader, find_route longest-prefix, ProxyService |
-| P1-T13 | barqium-core upstream forwarder with connection pool | done | YASSERRMD | — | passed | Forwarder hyper-util legacy client, hop-by-hop strip, timeout |
+| P1-T13 | barqium-core upstream forwarder with connection pool | done | YASSERRMD | cbd2f73 | passed | Forwarder hyper-util legacy client, hop-by-hop strip, timeout |
 | P1-T14 | barqium-policy JWT validator with JWKS cache | pending | — | — | pending | |
 | P1-T15 | barqium-policy API key validator | pending | — | — | pending | |
 | P1-T16 | barqium-policy sliding-window rate limiter (local) | pending | — | — | pending | |
