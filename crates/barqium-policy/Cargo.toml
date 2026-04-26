@@ -7,6 +7,7 @@ authors.workspace   = true
 license.workspace   = true
 
 [dependencies]
+barqium-mcp  = { path = "../barqium-mcp" }
 tokio        = { workspace = true }
 serde        = { workspace = true }
 serde_json   = { workspace = true }
@@ -18,3 +19,4 @@ ring         = { workspace = true }
 redis        = { workspace = true }
 thiserror    = { workspace = true }
 tracing      = { workspace = true }
+uuid         = { workspace = true }
