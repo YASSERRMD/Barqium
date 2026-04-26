@@ -11,6 +11,7 @@ use hyper_util::rt::TokioExecutor;
 use crate::error::ProxyError;
 use crate::grpc::is_grpc;
 use crate::snapshot::RouteMatch;
+use crate::sse::{annotate_sse_response, is_sse_response};
 
 // Hop-by-hop headers stripped before forwarding.
 const HOP_BY_HOP: &[&str] = &[
@@ -59,10 +60,15 @@ impl Forwarder {
 
         let timeout = Duration::from_millis(route.timeout_ms as u64);
 
-        let resp = tokio::time::timeout(timeout, self.client.request(req))
+        let mut resp = tokio::time::timeout(timeout, self.client.request(req))
             .await
             .map_err(|_| ProxyError::UpstreamTimeout)?
             .map_err(ProxyError::UpstreamRequest)?;
+
+        // Disable intermediate buffering for SSE streams.
+        if is_sse_response(resp.headers()) {
+            annotate_sse_response(resp.headers_mut());
+        }
 
         Ok(resp.map(|body| body.map_err(ProxyError::UpstreamBody).boxed()))
     }

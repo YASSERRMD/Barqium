@@ -7,6 +7,7 @@ pub mod grpc;
 pub mod listener;
 pub mod service;
 pub mod snapshot;
+pub mod sse;
 pub mod websocket;
 
 pub use config::DataPlaneConfig;
