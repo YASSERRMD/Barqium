@@ -7,7 +7,6 @@ Cargo.lock
 # Go
 vendor/
 *.exe
-services/*/go.sum
 
 # Node / UI
 ui/admin/node_modules/
