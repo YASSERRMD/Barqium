@@ -11,9 +11,11 @@ pub mod service;
 pub mod snapshot;
 pub mod sse;
 pub mod tls;
+pub mod upstream_health;
 pub mod websocket;
 
 pub use config::DataPlaneConfig;
 pub use error::ProxyError;
 pub use service::ProxyService;
 pub use snapshot::{RouteMatch, SnapshotReader};
+pub use upstream_health::{HealthChecker, UpstreamHealth};
