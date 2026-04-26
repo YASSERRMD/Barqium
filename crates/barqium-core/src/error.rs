@@ -22,6 +22,12 @@ pub enum ProxyError {
     #[error("upstream request failed: {0}")]
     UpstreamRequest(#[source] hyper_util::client::legacy::Error),
 
+    #[error("upstream timeout")]
+    UpstreamTimeout,
+
+    #[error("upstream body error: {0}")]
+    UpstreamBody(#[source] hyper::Error),
+
     #[error("snapshot read error: {0}")]
     Snapshot(String),
 }
