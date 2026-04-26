@@ -1,8 +1,8 @@
 # Barqium Build Tracker
 
-**Last updated:** 2026-04-26 19:45 (UTC)
-**Current phase:** Phase 3 — AI and MCP
-**Current branch:** phase_3_ai_mcp
+**Last updated:** 2026-04-26 20:00 (UTC)
+**Current phase:** Phase 4 — Frontier
+**Current branch:** phase_4_frontier
 
 ---
 
@@ -13,7 +13,7 @@
 | 1 — Foundation | done | phase_1_foundation | 2026-04-26 | 2026-04-26 | 20 of 20 tasks done |
 | 2 — Maturity | done | phase_2_maturity | 2026-04-26 | — | 20 of 20 tasks done, PR pending |
 | 3 — AI and MCP | done | phase_3_ai_mcp | 2026-04-26 | — | 20 of 20 tasks done, PR pending |
-| 4 — Frontier | pending | — | — | — | rolling phase |
+| 4 — Frontier | in_progress | phase_4_frontier | 2026-04-26 | — | 0 of 20 tasks done |
 
 ---
 
@@ -95,6 +95,33 @@
 | P1-T18 | barqium-telemetry Kafka producer | done | YASSERRMD | 044a745 | passed | |
 | P1-T19 | docker-compose.dev.yml | done | YASSERRMD | 6c7107c | passed | |
 | P1-T20 | End-to-end smoke test | done | YASSERRMD | f77c4b3 | passed | |
+
+---
+
+## Active Phase Tasks (Phase 4)
+
+| ID | Task | Status | Owner | Commit | Test Status | Notes |
+|---|---|---|---|---|---|---|
+| P4-T1 | HTTP/3: quinn + h3 deps, QUIC listener skeleton in barqium-core | pending | — | — | pending | |
+| P4-T2 | HTTP/3: route requests through existing proxy service via H3 handler | pending | — | — | pending | |
+| P4-T3 | barqium-wasm crate: wasmtime dep, WasmPlugin trait, PluginRuntime scaffold | pending | — | — | pending | |
+| P4-T4 | WASM host functions: header get/set/remove, log, get/set request vars | pending | — | — | pending | |
+| P4-T5 | WASM hot reload: notify file watcher + ArcSwap module live swap | pending | — | — | pending | |
+| P4-T6 | GraphQL operation detection: content-type + body parse, query/mutation/subscription | pending | — | — | pending | |
+| P4-T7 | GraphQL persisted queries: SHA-256 allowlist enforcement, 403 on unknown | pending | — | — | pending | |
+| P4-T8 | SOAP/XML mediation: envelope parsing, SOAPAction header routing | pending | — | — | pending | |
+| P4-T9 | SOAP fault normalization: wrap upstream errors in soap:Fault envelope | pending | — | — | pending | |
+| P4-T10 | Cross-region foundation: migration 005 regions table + control-api CRUD | pending | — | — | pending | |
+| P4-T11 | MirrorMaker2 topology: second Redpanda node + MM2 in docker-compose | pending | — | — | pending | |
+| P4-T12 | Edge binary profile: Cargo feature flags (default/full/edge), stripped build | pending | — | — | pending | |
+| P4-T13 | AVX-512 TLS acceleration: aws-lc-rs optional feature gate in barqium-core | pending | — | — | pending | |
+| P4-T14 | BPF/XDP scaffold: barqium-xdp crate with aya, SO_REUSEPORT on TCP listener | pending | — | — | pending | |
+| P4-T15 | Structured access logs to Kafka: AccessLogProducer, telemetry.access topic | pending | — | — | pending | |
+| P4-T16 | Dynamic upstream health checks: HealthChecker background task per upstream | pending | — | — | pending | |
+| P4-T17 | Circuit breaker: closed/open/half-open state machine per upstream | pending | — | — | pending | |
+| P4-T18 | Rate limit policy CRUD in control-api: migration 006 + REST handler | pending | — | — | pending | |
+| P4-T19 | WASM plugin registry in control-api: migration 007 + REST handler | pending | — | — | pending | |
+| P4-T20 | Phase 4 docker-compose and extended smoke test (21+ checks) | pending | — | — | pending | |
 
 ---
 
