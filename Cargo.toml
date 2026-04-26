@@ -73,6 +73,9 @@ tracing-opentelemetry = { version = "0.25" }
 thiserror = { version = "1" }
 anyhow    = { version = "1" }
 
+# Async trait support (needed for dyn-compatible async provider trait)
+async-trait = { version = "0.1" }
+
 # Utilities
 uuid      = { version = "1", features = ["v4", "serde"] }
 chrono    = { version = "0.4", features = ["serde"] }
