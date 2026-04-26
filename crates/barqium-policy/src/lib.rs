@@ -2,14 +2,18 @@
 
 pub mod abac;
 pub mod apikey;
+pub mod codemode;
 pub mod error;
 pub mod jwt;
+pub mod pii;
 pub mod ratelimit;
 pub mod redis_ratelimit;
 
 pub use abac::{evaluate_all, Attributes, Condition, Effect, Operator, Policy, Rule};
 pub use apikey::{ApiKeyMeta, ApiKeyStore};
+pub use codemode::CodeModeGate;
 pub use error::PolicyError;
 pub use jwt::{Claims, JwksCache, JwtValidator};
+pub use pii::{redact, PiiSpan, RedactedText};
 pub use ratelimit::{RateLimitConfig, RateLimiter};
 pub use redis_ratelimit::{RedisRateLimitConfig, RedisRateLimiter};

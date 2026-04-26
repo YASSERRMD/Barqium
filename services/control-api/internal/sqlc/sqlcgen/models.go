@@ -88,3 +88,28 @@ type Upstream struct {
 	CreatedAt time.Time `db:"created_at" json:"created_at"`
 	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
 }
+
+type AiProvider struct {
+	ID        uuid.UUID `db:"id" json:"id"`
+	TenantID  uuid.UUID `db:"tenant_id" json:"tenant_id"`
+	Name      string    `db:"name" json:"name"`
+	Provider  string    `db:"provider" json:"provider"`
+	BaseURL   *string   `db:"base_url" json:"base_url,omitempty"`
+	ApiKeyEnv *string   `db:"api_key_env" json:"api_key_env,omitempty"`
+	Enabled   bool      `db:"enabled" json:"enabled"`
+	CreatedAt time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
+}
+
+type AiModelPolicy struct {
+	ID                  uuid.UUID `db:"id" json:"id"`
+	TenantID            uuid.UUID `db:"tenant_id" json:"tenant_id"`
+	ProviderID          uuid.UUID `db:"provider_id" json:"provider_id"`
+	Model               string    `db:"model" json:"model"`
+	MaxTokensPerRequest int32     `db:"max_tokens_per_request" json:"max_tokens_per_request"`
+	BudgetUsdPerDay     *string   `db:"budget_usd_per_day" json:"budget_usd_per_day,omitempty"`
+	FallbackModel       *string   `db:"fallback_model" json:"fallback_model,omitempty"`
+	Enabled             bool      `db:"enabled" json:"enabled"`
+	CreatedAt           time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt           time.Time `db:"updated_at" json:"updated_at"`
+}
