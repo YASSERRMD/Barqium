@@ -50,6 +50,7 @@ func main() {
 	r.Use(middleware.Timeout(30 * time.Second))
 
 	r.Get("/health", handler.Health(pool))
+	r.Get("/api/openapi.yaml", handler.OpenAPI())
 
 	oidcMiddleware := apimiddleware.OIDC(apimiddleware.OIDCConfig{
 		JWKSURL:  cfg.OIDCJWKSURL,

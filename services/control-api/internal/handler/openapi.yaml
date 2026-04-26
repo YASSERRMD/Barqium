@@ -1,0 +1,357 @@
+openapi: "3.0.3"
+info:
+  title: Barqium Control API
+  description: Management plane API for the Barqium AI-native gateway.
+  version: "1.0.0"
+  contact:
+    name: Mohamed Yasser
+    email: arafath.yasser@gmail.com
+
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Local development
+
+security:
+  - BearerAuth: []
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Tenant:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        slug: { type: string }
+        enabled: { type: boolean }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    CreateTenantBody:
+      type: object
+      required: [name, slug]
+      properties:
+        name: { type: string }
+        slug: { type: string, pattern: "^[a-z0-9]([a-z0-9\\-]{0,61}[a-z0-9])?$" }
+        enabled: { type: boolean, default: true }
+
+    UpdateTenantBody:
+      type: object
+      properties:
+        name: { type: string }
+        slug: { type: string }
+        enabled: { type: boolean }
+
+    Upstream:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        tenant_id: { type: string, format: uuid }
+        name: { type: string }
+        base_url: { type: string, format: uri }
+        timeout_ms: { type: integer }
+        enabled: { type: boolean }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    CreateUpstreamBody:
+      type: object
+      required: [name, base_url]
+      properties:
+        name: { type: string }
+        base_url: { type: string, format: uri }
+        timeout_ms: { type: integer, default: 5000 }
+        enabled: { type: boolean, default: true }
+
+    UpdateUpstreamBody:
+      type: object
+      properties:
+        name: { type: string }
+        base_url: { type: string, format: uri }
+        timeout_ms: { type: integer }
+        enabled: { type: boolean }
+
+    Route:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        tenant_id: { type: string, format: uuid }
+        upstream_id: { type: string, format: uuid }
+        method: { type: string, default: "*" }
+        path_prefix: { type: string }
+        host: { type: string }
+        enabled: { type: boolean }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    CreateRouteBody:
+      type: object
+      required: [path_prefix, upstream_id]
+      properties:
+        method: { type: string, default: "*" }
+        path_prefix: { type: string }
+        host: { type: string }
+        upstream_id: { type: string, format: uuid }
+        enabled: { type: boolean, default: true }
+
+    UpdateRouteBody:
+      type: object
+      properties:
+        method: { type: string }
+        path_prefix: { type: string }
+        host: { type: string }
+        upstream_id: { type: string, format: uuid }
+        enabled: { type: boolean }
+
+    ConfigCheckpoint:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        tenant_id: { type: string, format: uuid }
+        sequence: { type: integer, format: int64 }
+        outbox_last_id: { type: integer, format: int64, nullable: true }
+        note: { type: string, nullable: true }
+        created_at: { type: string, format: date-time }
+
+    CreateCheckpointBody:
+      type: object
+      required: [sequence]
+      properties:
+        sequence: { type: integer, format: int64 }
+        outbox_last_id: { type: integer, format: int64 }
+        note: { type: string }
+
+    RollbackBody:
+      type: object
+      required: [target_sequence]
+      properties:
+        target_sequence: { type: integer, format: int64 }
+
+    Error:
+      type: object
+      properties:
+        error: { type: string }
+
+  parameters:
+    tenantId:
+      in: path
+      name: tenantId
+      required: true
+      schema: { type: string, format: uuid }
+    id:
+      in: path
+      name: id
+      required: true
+      schema: { type: string, format: uuid }
+    limit:
+      in: query
+      name: limit
+      schema: { type: integer, default: 50, maximum: 200 }
+    offset:
+      in: query
+      name: offset
+      schema: { type: integer, default: 0 }
+
+paths:
+  /tenants:
+    get:
+      operationId: listTenants
+      summary: List tenants
+      parameters:
+        - $ref: "#/components/parameters/limit"
+        - $ref: "#/components/parameters/offset"
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/Tenant" } } } } }
+    post:
+      operationId: createTenant
+      summary: Create tenant
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateTenantBody" }
+      responses:
+        "201": { description: Created, content: { application/json: { schema: { $ref: "#/components/schemas/Tenant" } } } }
+        "409": { description: Slug conflict, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+
+  /tenants/{id}:
+    get:
+      operationId: getTenant
+      summary: Get tenant by ID
+      parameters:
+        - $ref: "#/components/parameters/id"
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Tenant" } } } }
+        "404": { description: Not found }
+    patch:
+      operationId: updateTenant
+      summary: Update tenant
+      parameters:
+        - $ref: "#/components/parameters/id"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UpdateTenantBody" }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Tenant" } } } }
+    delete:
+      operationId: deleteTenant
+      summary: Delete tenant
+      parameters:
+        - $ref: "#/components/parameters/id"
+      responses:
+        "204": { description: No content }
+
+  /tenants/{tenantId}/upstreams:
+    get:
+      operationId: listUpstreams
+      summary: List upstreams for a tenant
+      parameters:
+        - $ref: "#/components/parameters/tenantId"
+        - $ref: "#/components/parameters/limit"
+        - $ref: "#/components/parameters/offset"
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/Upstream" } } } } }
+    post:
+      operationId: createUpstream
+      summary: Create upstream
+      parameters:
+        - $ref: "#/components/parameters/tenantId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateUpstreamBody" }
+      responses:
+        "201": { description: Created, content: { application/json: { schema: { $ref: "#/components/schemas/Upstream" } } } }
+
+  /tenants/{tenantId}/upstreams/{id}:
+    get:
+      operationId: getUpstream
+      summary: Get upstream
+      parameters:
+        - $ref: "#/components/parameters/tenantId"
+        - $ref: "#/components/parameters/id"
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Upstream" } } } }
+    patch:
+      operationId: updateUpstream
+      summary: Update upstream
+      parameters:
+        - $ref: "#/components/parameters/tenantId"
+        - $ref: "#/components/parameters/id"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UpdateUpstreamBody" }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Upstream" } } } }
+    delete:
+      operationId: deleteUpstream
+      summary: Delete upstream
+      parameters:
+        - $ref: "#/components/parameters/tenantId"
+        - $ref: "#/components/parameters/id"
+      responses:
+        "204": { description: No content }
+
+  /tenants/{tenantId}/routes:
+    get:
+      operationId: listRoutes
+      summary: List routes for a tenant
+      parameters:
+        - $ref: "#/components/parameters/tenantId"
+        - $ref: "#/components/parameters/limit"
+        - $ref: "#/components/parameters/offset"
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/Route" } } } } }
+    post:
+      operationId: createRoute
+      summary: Create route
+      parameters:
+        - $ref: "#/components/parameters/tenantId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateRouteBody" }
+      responses:
+        "201": { description: Created, content: { application/json: { schema: { $ref: "#/components/schemas/Route" } } } }
+
+  /tenants/{tenantId}/routes/{id}:
+    get:
+      operationId: getRoute
+      summary: Get route
+      parameters:
+        - $ref: "#/components/parameters/tenantId"
+        - $ref: "#/components/parameters/id"
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Route" } } } }
+    patch:
+      operationId: updateRoute
+      summary: Update route
+      parameters:
+        - $ref: "#/components/parameters/tenantId"
+        - $ref: "#/components/parameters/id"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UpdateRouteBody" }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Route" } } } }
+    delete:
+      operationId: deleteRoute
+      summary: Delete route
+      parameters:
+        - $ref: "#/components/parameters/tenantId"
+        - $ref: "#/components/parameters/id"
+      responses:
+        "204": { description: No content }
+
+  /tenants/{tenantId}/config/checkpoints:
+    get:
+      operationId: listCheckpoints
+      summary: List config checkpoints
+      parameters:
+        - $ref: "#/components/parameters/tenantId"
+        - $ref: "#/components/parameters/limit"
+        - $ref: "#/components/parameters/offset"
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/ConfigCheckpoint" } } } } }
+    post:
+      operationId: createCheckpoint
+      summary: Pin a config checkpoint
+      parameters:
+        - $ref: "#/components/parameters/tenantId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateCheckpointBody" }
+      responses:
+        "201": { description: Created, content: { application/json: { schema: { $ref: "#/components/schemas/ConfigCheckpoint" } } } }
+
+  /tenants/{tenantId}/config/checkpoints/rollback:
+    post:
+      operationId: rollbackConfig
+      summary: Request rollback to a checkpoint
+      parameters:
+        - $ref: "#/components/parameters/tenantId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RollbackBody" }
+      responses:
+        "202": { description: Rollback accepted }
+        "404": { description: Checkpoint not found }
