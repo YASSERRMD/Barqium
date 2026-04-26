@@ -1,0 +1,198 @@
+version: "3.9"
+
+# Barqium local development stack.
+# Run from the repo root: docker compose -f deploy/docker-compose.dev.yml up
+#
+# Services:
+#   postgres     - authoritative config store
+#   redpanda     - Kafka-compatible event bus (single node)
+#   redis        - distributed rate-limit counters (Phase 2)
+#   jaeger       - OTLP traces collector + UI
+#   control-api  - Go admin REST API
+#   outbox-worker - Go transactional outbox to Kafka
+#   snapshot     - Rust snapshot compiler (Kafka -> /dev/shm)
+#   dataplane    - Rust HTTP proxy (reads /dev/shm)
+
+networks:
+  barqium:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redpanda_data:
+  shm_barqium:    # shared tmpfs between snapshot and dataplane
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # Infrastructure
+  # ---------------------------------------------------------------------------
+
+  postgres:
+    image: postgres:16-alpine
+    networks: [barqium]
+    environment:
+      POSTGRES_DB:       barqium
+      POSTGRES_USER:     barqium
+      POSTGRES_PASSWORD: barqium
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ../services/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U barqium"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redpanda:
+    image: redpandadata/redpanda:v23.3.18
+    networks: [barqium]
+    command:
+      - redpanda
+      - start
+      - --mode=dev-container
+      - --overprovisioned
+      - --smp=1
+      - --memory=512M
+      - --reserve-memory=0M
+      - --node-id=0
+      - --check=false
+      - --kafka-addr=PLAINTEXT://0.0.0.0:29092,OUTSIDE://0.0.0.0:9092
+      - --advertise-kafka-addr=PLAINTEXT://redpanda:29092,OUTSIDE://localhost:9092
+    ports:
+      - "9092:9092"   # external Kafka
+      - "9644:9644"   # admin API
+    volumes:
+      - redpanda_data:/var/lib/redpanda/data
+    healthcheck:
+      test: ["CMD", "rpk", "cluster", "info", "--brokers=localhost:9092"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 15s
+
+  # Creates required Kafka topics once Redpanda is ready.
+  redpanda-init:
+    image: redpandadata/redpanda:v23.3.18
+    networks: [barqium]
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    entrypoint: >
+      sh -c "
+        rpk topic create config.changes     --brokers=redpanda:29092 --partitions=1 --replicas=1 || true &&
+        rpk topic create audit.operators    --brokers=redpanda:29092 --partitions=1 --replicas=1 || true &&
+        rpk topic create telemetry.requests --brokers=redpanda:29092 --partitions=4 --replicas=1 || true &&
+        rpk topic create telemetry.llm      --brokers=redpanda:29092 --partitions=4 --replicas=1 || true &&
+        echo 'topics ready'
+      "
+    restart: "no"
+
+  redis:
+    image: redis:7-alpine
+    networks: [barqium]
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.54
+    networks: [barqium]
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "16686:16686"  # Jaeger UI
+      - "4317:4317"    # OTLP gRPC
+      - "4318:4318"    # OTLP HTTP
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:14269/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ---------------------------------------------------------------------------
+  # Application services
+  # ---------------------------------------------------------------------------
+
+  control-api:
+    build:
+      context: ../services/control-api
+      dockerfile: Dockerfile
+    networks: [barqium]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redpanda:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://barqium:barqium@postgres:5432/barqium
+      KAFKA_BROKERS: redpanda:29092
+      LISTEN_ADDR: "0.0.0.0:8080"
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+  outbox-worker:
+    build:
+      context: ../services/outbox-worker
+      dockerfile: Dockerfile
+    networks: [barqium]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redpanda:
+        condition: service_healthy
+      redpanda-init:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URL:   postgres://barqium:barqium@postgres:5432/barqium
+      KAFKA_BROKERS:  redpanda:29092
+      POLL_INTERVAL:  "1s"
+      BATCH_SIZE:     "50"
+    restart: unless-stopped
+
+  snapshot:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.snapshot
+    networks: [barqium]
+    depends_on:
+      redpanda:
+        condition: service_healthy
+      redpanda-init:
+        condition: service_completed_successfully
+    environment:
+      KAFKA_BROKERS:   redpanda:29092
+      KAFKA_TOPIC:     config.changes
+      KAFKA_GROUP_ID:  barqium-snapshot
+      SNAPSHOT_DIR:    /dev/shm/barqium
+    volumes:
+      - shm_barqium:/dev/shm/barqium
+    restart: unless-stopped
+
+  dataplane:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.dataplane
+    networks: [barqium]
+    depends_on:
+      snapshot:
+        condition: service_started
+      jaeger:
+        condition: service_healthy
+    environment:
+      LISTEN_ADDR:   "0.0.0.0:9000"
+      SNAPSHOT_DIR:  /dev/shm/barqium
+      OTLP_ENDPOINT: http://jaeger:4318
+      SERVICE_NAME:  barqium-dataplane
+    volumes:
+      - shm_barqium:/dev/shm/barqium
+    ports:
+      - "9000:9000"
+    restart: unless-stopped
