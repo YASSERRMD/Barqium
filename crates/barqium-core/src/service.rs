@@ -13,9 +13,10 @@ use tracing::debug;
 use crate::error::ProxyError;
 use crate::forwarder::{error_body, Forwarder};
 use crate::snapshot::SnapshotReader;
+use crate::websocket::{is_websocket_upgrade, proxy_websocket};
 
-/// Full proxy service: reads the snapshot, matches the route, forwards to
-/// the upstream, and returns the response.
+/// Full proxy service: reads the snapshot, matches the route, and dispatches
+/// to the correct handler (WebSocket, gRPC, or plain HTTP).
 #[derive(Clone)]
 pub struct ProxyService {
     reader: Arc<Mutex<SnapshotReader>>,
@@ -77,11 +78,27 @@ impl hyper::service::Service<Request<Incoming>> for ProxyService {
                 "route matched"
             );
 
-            match forwarder.forward(req, &route_match).await {
-                Ok(resp) => Ok(resp),
-                Err(e) => {
-                    tracing::warn!(upstream = %route_match.upstream_url, "upstream error: {e}");
-                    Ok(status_response(StatusCode::BAD_GATEWAY, "upstream error\n"))
+            // WebSocket upgrades are handled separately; plain HTTP/REST and
+            // gRPC go through the standard forwarder.
+            if is_websocket_upgrade(req.headers()) {
+                match proxy_websocket(req, &route_match.upstream_url, route_match.timeout_ms).await
+                {
+                    Ok(resp) => Ok(resp),
+                    Err(e) => {
+                        tracing::warn!(upstream = %route_match.upstream_url, "WS upgrade error: {e}");
+                        Ok(status_response(
+                            StatusCode::BAD_GATEWAY,
+                            "websocket upgrade error\n",
+                        ))
+                    }
+                }
+            } else {
+                match forwarder.forward(req, &route_match).await {
+                    Ok(resp) => Ok(resp),
+                    Err(e) => {
+                        tracing::warn!(upstream = %route_match.upstream_url, "upstream error: {e}");
+                        Ok(status_response(StatusCode::BAD_GATEWAY, "upstream error\n"))
+                    }
                 }
             }
         })

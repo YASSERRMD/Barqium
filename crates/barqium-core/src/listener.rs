@@ -51,7 +51,8 @@ where
         let builder = builder.clone();
 
         tokio::spawn(async move {
-            if let Err(e) = builder.serve_connection(io, svc).await {
+            // with_upgrades() is required for WebSocket proxying (P2-T3).
+            if let Err(e) = builder.serve_connection_with_upgrades(io, svc).await {
                 tracing::debug!(peer = %peer, "connection closed: {e}");
             }
         });
