@@ -2,6 +2,7 @@
 
 pub mod budget;
 pub mod error;
+pub mod fallback;
 pub mod provider;
 pub mod providers;
 pub mod types;
