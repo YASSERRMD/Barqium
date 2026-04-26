@@ -1,7 +1,7 @@
 # Barqium Build Tracker
 
-**Last updated:** 2026-04-26 13:00 (UTC)
-**Current phase:** Phase 2 — Maturity
+**Last updated:** 2026-04-26 14:30 (UTC)
+**Current phase:** Phase 2 — Maturity (complete, pending PR merge)
 **Current branch:** phase_2_maturity
 
 ---
@@ -11,7 +11,7 @@
 | Phase | Status | Branch | Started | Merged | Notes |
 |---|---|---|---|---|---|
 | 1 — Foundation | done | phase_1_foundation | 2026-04-26 | 2026-04-26 | 20 of 20 tasks done |
-| 2 — Maturity | in_progress | phase_2_maturity | 2026-04-26 | — | 19 of 20 tasks done |
+| 2 — Maturity | done | phase_2_maturity | 2026-04-26 | — | 20 of 20 tasks done, PR pending |
 | 3 — AI and MCP | pending | — | — | — | scope to be expanded after P2 merge |
 | 4 — Frontier | pending | — | — | — | rolling phase |
 
@@ -40,7 +40,7 @@
 | P2-T17 | Distributed rate limiting via Redis (sliding window, replaces local limiter on hot path) | done | YASSERRMD | — | passed | |
 | P2-T18 | Blue-green data-plane rollout: health endpoint + graceful connection drain | done | YASSERRMD | — | passed | |
 | P2-T19 | OpenAPI spec generation from control-api (swaggo or huma) | done | YASSERRMD | — | passed | |
-| P2-T20 | Update docker-compose.dev.yml and smoke test for Phase 2 services | pending | — | — | pending | |
+| P2-T20 | Update docker-compose.dev.yml and smoke test for Phase 2 services | done | YASSERRMD | fd5fef2 | passed | |
 
 ---
 
