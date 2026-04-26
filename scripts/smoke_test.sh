@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Phase 1 end-to-end smoke test.
+# Phase 2 end-to-end smoke test.
 #
 # Prerequisites:
 #   - docker compose stack is up: docker compose -f deploy/docker-compose.dev.yml up -d
@@ -16,6 +16,7 @@ set -euo pipefail
 
 CONTROL_API="${CONTROL_API:-http://localhost:8080}"
 DATAPLANE="${DATAPLANE:-http://localhost:9000}"
+DATAPLANE_HEALTH="${DATAPLANE_HEALTH:-http://localhost:9001}"
 KAFKA_BROKERS="${KAFKA_BROKERS:-localhost:9092}"
 ECHO_UPSTREAM="${ECHO_UPSTREAM:-http://whoami:80}"   # resolved inside compose network
 
@@ -38,7 +39,41 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-step "2. Create tenant"
+step "2. OpenAPI spec endpoint"
+# ---------------------------------------------------------------------------
+OPENAPI_STATUS=$(curl -fsS -o /dev/null -w "%{http_code}" \
+  "$CONTROL_API/api/openapi.yaml" 2>/dev/null || echo "000")
+if [ "$OPENAPI_STATUS" = "200" ]; then
+  ok "OpenAPI spec served at GET /api/openapi.yaml (HTTP $OPENAPI_STATUS)"
+else
+  fail "OpenAPI spec endpoint returned unexpected status: $OPENAPI_STATUS"
+fi
+
+# ---------------------------------------------------------------------------
+step "3. Data-plane liveness (livez)"
+# ---------------------------------------------------------------------------
+LIVEZ_STATUS=$(curl -fsS -o /dev/null -w "%{http_code}" \
+  "$DATAPLANE_HEALTH/livez" 2>/dev/null || echo "000")
+if [ "$LIVEZ_STATUS" = "200" ]; then
+  ok "dataplane /livez returned 200"
+else
+  # Health server may not be wired in the dev stub; warn but do not fail.
+  echo "  [WARN] dataplane /livez returned $LIVEZ_STATUS (health server may not be active in this build)"
+fi
+
+# ---------------------------------------------------------------------------
+step "4. Data-plane readiness (readyz)"
+# ---------------------------------------------------------------------------
+READYZ_STATUS=$(curl -fsS -o /dev/null -w "%{http_code}" \
+  "$DATAPLANE_HEALTH/readyz" 2>/dev/null || echo "000")
+if [ "$READYZ_STATUS" = "200" ]; then
+  ok "dataplane /readyz returned 200 (not draining)"
+else
+  echo "  [WARN] dataplane /readyz returned $READYZ_STATUS (health server may not be active in this build)"
+fi
+
+# ---------------------------------------------------------------------------
+step "5. Create tenant"
 # ---------------------------------------------------------------------------
 SLUG="smoke-$(date +%s)"
 TENANT=$(curl -fsS -X POST "$CONTROL_API/api/v1/tenants" \
@@ -53,7 +88,7 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-step "3. Create upstream (local whoami echo service)"
+step "6. Create upstream (local whoami echo service)"
 # ---------------------------------------------------------------------------
 UPSTREAM=$(curl -fsS -X POST "$CONTROL_API/api/v1/tenants/$TENANT_ID/upstreams" \
   -H "Content-Type: application/json" \
@@ -67,12 +102,11 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-step "4. Create route"
+step "7. Create route"
 # ---------------------------------------------------------------------------
 ROUTE=$(curl -fsS -X POST "$CONTROL_API/api/v1/tenants/$TENANT_ID/routes" \
   -H "Content-Type: application/json" \
   -d "{
-    \"name\": \"echo-get\",
     \"method\": \"GET\",
     \"path_prefix\": \"/smoke\",
     \"upstream_id\": \"$UPSTREAM_ID\"
@@ -86,14 +120,40 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-step "5. Wait for snapshot propagation (outbox -> Kafka -> snapshot compiler)"
+step "8. Pin a config checkpoint (Phase 2: version pinning)"
+# ---------------------------------------------------------------------------
+CHECKPOINT=$(curl -fsS -X POST \
+  "$CONTROL_API/api/v1/tenants/$TENANT_ID/config/checkpoints" \
+  -H "Content-Type: application/json" \
+  -d "{\"sequence\":1,\"note\":\"smoke test checkpoint\"}")
+CHECKPOINT_ID=$(echo "$CHECKPOINT" | jq -r '.id')
+if [ -n "$CHECKPOINT_ID" ] && [ "$CHECKPOINT_ID" != "null" ]; then
+  ok "checkpoint created: id=$CHECKPOINT_ID sequence=1"
+else
+  fail "checkpoint creation failed: $CHECKPOINT"
+fi
+
+# ---------------------------------------------------------------------------
+step "9. List checkpoints"
+# ---------------------------------------------------------------------------
+CHECKPOINTS=$(curl -fsS \
+  "$CONTROL_API/api/v1/tenants/$TENANT_ID/config/checkpoints")
+COUNT=$(echo "$CHECKPOINTS" | jq 'length')
+if [ "${COUNT:-0}" -ge 1 ]; then
+  ok "checkpoints list returned $COUNT entry(ies)"
+else
+  fail "checkpoints list is empty or failed: $CHECKPOINTS"
+fi
+
+# ---------------------------------------------------------------------------
+step "10. Wait for snapshot propagation (outbox -> Kafka -> snapshot compiler)"
 # ---------------------------------------------------------------------------
 echo "    sleeping 5s for event pipeline..."
 sleep 5
 ok "propagation wait done"
 
 # ---------------------------------------------------------------------------
-step "6. Hit the data-plane proxy"
+step "11. Hit the data-plane proxy"
 # ---------------------------------------------------------------------------
 STATUS=$(curl -fsS -o /dev/null -w "%{http_code}" \
   "$DATAPLANE/smoke" 2>/dev/null || echo "000")
@@ -106,7 +166,7 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-step "7. Check telemetry.requests topic (10s sample)"
+step "12. Check telemetry.requests topic (10s sample)"
 # ---------------------------------------------------------------------------
 if command -v rpk &>/dev/null; then
   COUNT=$(rpk topic consume telemetry.requests \
@@ -121,6 +181,21 @@ if command -v rpk &>/dev/null; then
   fi
 else
   echo "    SKIP: rpk not installed; cannot verify telemetry topic"
+fi
+
+# ---------------------------------------------------------------------------
+step "13. Check audit.events topic exists (Phase 2: audit sink)"
+# ---------------------------------------------------------------------------
+if command -v rpk &>/dev/null; then
+  TOPIC_INFO=$(rpk topic describe audit.events \
+    --brokers="$KAFKA_BROKERS" 2>/dev/null || echo "")
+  if [ -n "$TOPIC_INFO" ]; then
+    ok "audit.events topic exists"
+  else
+    fail "audit.events topic not found"
+  fi
+else
+  echo "    SKIP: rpk not installed; cannot verify audit.events topic"
 fi
 
 # ---------------------------------------------------------------------------
