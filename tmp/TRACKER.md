@@ -1,6 +1,6 @@
 # Barqium Build Tracker
 
-**Last updated:** 2026-04-26 15:00 (UTC)
+**Last updated:** 2026-04-26 19:45 (UTC)
 **Current phase:** Phase 3 — AI and MCP
 **Current branch:** phase_3_ai_mcp
 
@@ -12,7 +12,7 @@
 |---|---|---|---|---|---|
 | 1 — Foundation | done | phase_1_foundation | 2026-04-26 | 2026-04-26 | 20 of 20 tasks done |
 | 2 — Maturity | done | phase_2_maturity | 2026-04-26 | — | 20 of 20 tasks done, PR pending |
-| 3 — AI and MCP | in_progress | phase_3_ai_mcp | 2026-04-26 | — | 0 of 20 tasks done |
+| 3 — AI and MCP | done | phase_3_ai_mcp | 2026-04-26 | — | 20 of 20 tasks done, PR pending |
 | 4 — Frontier | pending | — | — | — | rolling phase |
 
 ---
@@ -48,26 +48,26 @@
 
 | ID | Task | Status | Owner | Commit | Test Status | Notes |
 |---|---|---|---|---|---|---|
-| P3-T1 | barqium-ai crate: provider trait, request/response types, error types | pending | — | — | pending | |
-| P3-T2 | OpenAI provider: chat completions + streaming (SSE passthrough) | pending | — | — | pending | |
-| P3-T3 | Anthropic provider: messages API + streaming | pending | — | — | pending | |
-| P3-T4 | Groq + Ollama providers (OpenAI-compatible adapters) | pending | — | — | pending | |
-| P3-T5 | Bedrock provider: AWS SigV4 auth + converse API | pending | — | — | pending | |
-| P3-T6 | Token counting: tiktoken-rs for OpenAI, heuristic counter for Claude | pending | — | — | pending | |
-| P3-T7 | Cost ceiling: USD rate table per model, per-request budget enforcement | pending | — | — | pending | |
-| P3-T8 | Fallback chains: ordered provider list with retry-on-error/timeout | pending | — | — | pending | |
-| P3-T9 | Semantic cache: HNSW in-memory index, embedding lookup, cache-hit passthrough | pending | — | — | pending | |
-| P3-T10 | barqium-mcp crate: MCP types (Tool, ToolCall, ToolResult, ServerInfo, capabilities) | pending | — | — | pending | |
-| P3-T11 | MCP client role - HTTP+SSE transport: connect to remote MCP servers | pending | — | — | pending | |
-| P3-T12 | MCP client role - stdio transport: spawn and communicate with local MCP servers | pending | — | — | pending | |
-| P3-T13 | MCP server role: expose Barqium as an MCP server, route tool calls to upstreams | pending | — | — | pending | |
-| P3-T14 | Tool registry: store registered tools in Postgres, CRUD in control-api | pending | — | — | pending | |
-| P3-T15 | Tool-level RBAC: per-tool allow/deny wired into ABAC evaluator | pending | — | — | pending | |
-| P3-T16 | Federated OAuth: per-server OAuth2 client-credentials + PKCE, token auto-refresh | pending | — | — | pending | |
-| P3-T17 | Code Mode progressive disclosure: tool visibility tiers, per-session gate | pending | — | — | pending | |
-| P3-T18 | PII redaction: regex + entity scanner, reversible tokenisation with session key | pending | — | — | pending | |
-| P3-T19 | AI routes in control-api: provider config CRUD, model policies per tenant | pending | — | — | pending | |
-| P3-T20 | Update docker-compose and smoke test for Phase 3 services | pending | — | — | pending | |
+| P3-T1 | barqium-ai crate: provider trait, request/response types, error types | done | YASSERRMD | — | passed | |
+| P3-T2 | OpenAI provider: chat completions + streaming (SSE passthrough) | done | YASSERRMD | — | passed | |
+| P3-T3 | Anthropic provider: messages API + streaming | done | YASSERRMD | — | passed | |
+| P3-T4 | Groq + Ollama providers (OpenAI-compatible adapters) | done | YASSERRMD | — | passed | |
+| P3-T5 | Bedrock provider: AWS SigV4 auth + converse API | done | YASSERRMD | — | passed | |
+| P3-T6 | Token counting: tiktoken-rs for OpenAI, heuristic counter for Claude | done | YASSERRMD | — | passed | |
+| P3-T7 | Cost ceiling: USD rate table per model, per-request budget enforcement | done | YASSERRMD | — | passed | |
+| P3-T8 | Fallback chains: ordered provider list with retry-on-error/timeout | done | YASSERRMD | — | passed | |
+| P3-T9 | Semantic cache: HNSW in-memory index, embedding lookup, cache-hit passthrough | done | YASSERRMD | — | passed | |
+| P3-T10 | barqium-mcp crate: MCP types (Tool, ToolCall, ToolResult, ServerInfo, capabilities) | done | YASSERRMD | — | passed | |
+| P3-T11 | MCP client role - HTTP+SSE transport: connect to remote MCP servers | done | YASSERRMD | — | passed | |
+| P3-T12 | MCP client role - stdio transport: spawn and communicate with local MCP servers | done | YASSERRMD | — | passed | |
+| P3-T13 | MCP server role: expose Barqium as an MCP server, route tool calls to upstreams | done | YASSERRMD | — | passed | |
+| P3-T14 | Tool registry: store registered tools in Postgres, CRUD in control-api | done | YASSERRMD | — | passed | |
+| P3-T15 | Tool-level RBAC: per-tool allow/deny wired into ABAC evaluator | done | YASSERRMD | — | passed | |
+| P3-T16 | Federated OAuth: per-server OAuth2 client-credentials + PKCE, token auto-refresh | done | YASSERRMD | — | passed | |
+| P3-T17 | Code Mode progressive disclosure: tool visibility tiers, per-session gate | done | YASSERRMD | 934f0f1 | passed | |
+| P3-T18 | PII redaction: regex + entity scanner, reversible tokenisation with session key | done | YASSERRMD | 934f0f1 | passed | |
+| P3-T19 | AI routes in control-api: provider config CRUD, model policies per tenant | done | YASSERRMD | 9701beb | passed | |
+| P3-T20 | Update docker-compose and smoke test for Phase 3 services | done | YASSERRMD | 3c51dbe | passed | |
 
 ---
 
