@@ -1,11 +1,15 @@
-//! Policy chain evaluator: JWT validation, API key checks, rate limiting.
+//! Policy chain evaluator: JWT validation, API key checks, rate limiting, ABAC.
 
+pub mod abac;
 pub mod apikey;
 pub mod error;
 pub mod jwt;
 pub mod ratelimit;
+pub mod redis_ratelimit;
 
+pub use abac::{evaluate_all, Attributes, Condition, Effect, Operator, Policy, Rule};
 pub use apikey::{ApiKeyMeta, ApiKeyStore};
 pub use error::PolicyError;
 pub use jwt::{Claims, JwksCache, JwtValidator};
 pub use ratelimit::{RateLimitConfig, RateLimiter};
+pub use redis_ratelimit::{RedisRateLimitConfig, RedisRateLimiter};

@@ -15,5 +15,6 @@ reqwest      = { workspace = true }
 arc-swap     = { workspace = true }
 dashmap      = { workspace = true }
 ring         = { workspace = true }
+redis        = { workspace = true }
 thiserror    = { workspace = true }
 tracing      = { workspace = true }

@@ -16,6 +16,7 @@ import (
 	"github.com/yasserrmd/barqium/services/control-api/internal/config"
 	"github.com/yasserrmd/barqium/services/control-api/internal/db"
 	"github.com/yasserrmd/barqium/services/control-api/internal/handler"
+	apimiddleware "github.com/yasserrmd/barqium/services/control-api/internal/middleware"
 	"github.com/yasserrmd/barqium/services/control-api/internal/sqlc/sqlcgen"
 )
 
@@ -49,15 +50,40 @@ func main() {
 	r.Use(middleware.Timeout(30 * time.Second))
 
 	r.Get("/health", handler.Health(pool))
+	r.Get("/api/openapi.yaml", handler.OpenAPI())
+
+	oidcMiddleware := apimiddleware.OIDC(apimiddleware.OIDCConfig{
+		JWKSURL:  cfg.OIDCJWKSURL,
+		Audience: cfg.OIDCAudience,
+		Issuer:   cfg.OIDCIssuer,
+	})
+
+	tenantScope := apimiddleware.TenantScope("admin")
+	adminOnly := apimiddleware.RequireRole("admin")
 
 	r.Route("/api/v1", func(r chi.Router) {
+		r.Use(oidcMiddleware)
+
 		r.Route("/tenants", func(r chi.Router) {
-			handler.Tenants(r, q)
+			// Create and delete tenant are admin-only; reads are open to any valid token.
+			r.With(adminOnly).Post("/", handler.CreateTenantHandler(q))
+			r.With(adminOnly).Delete("/{id}", handler.DeleteTenantHandler(q))
+			// GET /tenants and GET /tenants/{id} and PATCH /tenants/{id} use no extra guard.
+			r.Get("/", handler.ListTenantsHandler(q))
+			r.Get("/{id}", handler.GetTenantHandler(q))
+			r.Patch("/{id}", handler.UpdateTenantHandler(q))
+
 			r.Route("/{tenantId}/upstreams", func(r chi.Router) {
+				r.Use(tenantScope)
 				handler.Upstreams(r, q)
 			})
 			r.Route("/{tenantId}/routes", func(r chi.Router) {
+				r.Use(tenantScope)
 				handler.Routes(r, q)
+			})
+			r.Route("/{tenantId}/config/checkpoints", func(r chi.Router) {
+				r.Use(tenantScope)
+				handler.Checkpoints(r, q)
 			})
 		})
 	})

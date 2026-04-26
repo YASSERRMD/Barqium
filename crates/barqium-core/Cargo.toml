@@ -10,7 +10,7 @@ license.workspace   = true
 barqium-config     = { path = "../barqium-config" }
 tokio              = { workspace = true }
 hyper              = { workspace = true }
-hyper-util         = { workspace = true, features = ["client", "client-legacy", "http1", "tokio"] }
+hyper-util         = { workspace = true, features = ["client", "client-legacy", "http1", "http2", "server-auto", "tokio"] }
 http               = { workspace = true }
 http-body-util     = { workspace = true }
 tower              = { workspace = true }
@@ -20,3 +20,6 @@ futures            = { workspace = true }
 mmap-sync          = { workspace = true }
 thiserror          = { workspace = true }
 tracing            = { workspace = true }
+rustls             = { workspace = true }
+tokio-rustls       = { workspace = true }
+rustls-pemfile     = { workspace = true }

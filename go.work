@@ -1,6 +1,7 @@
-go 1.25.0
+go 1.25.5
 
 use (
+	./services/audit-consumer
 	./services/control-api
 	./services/outbox-worker
 )

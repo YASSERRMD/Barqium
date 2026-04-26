@@ -11,6 +11,15 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type ConfigCheckpoint struct {
+	ID           uuid.UUID `db:"id" json:"id"`
+	TenantID     uuid.UUID `db:"tenant_id" json:"tenant_id"`
+	Sequence     int64     `db:"sequence" json:"sequence"`
+	OutboxLastID *int64    `db:"outbox_last_id" json:"outbox_last_id"`
+	Note         *string   `db:"note" json:"note"`
+	CreatedAt    time.Time `db:"created_at" json:"created_at"`
+}
+
 type Consumer struct {
 	ID        uuid.UUID `db:"id" json:"id"`
 	TenantID  uuid.UUID `db:"tenant_id" json:"tenant_id"`

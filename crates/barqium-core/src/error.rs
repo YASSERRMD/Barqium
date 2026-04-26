@@ -30,4 +30,7 @@ pub enum ProxyError {
 
     #[error("snapshot read error: {0}")]
     Snapshot(String),
+
+    #[error("TLS error: {0}")]
+    Tls(String),
 }
