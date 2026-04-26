@@ -16,6 +16,7 @@ import (
 	"github.com/yasserrmd/barqium/services/control-api/internal/config"
 	"github.com/yasserrmd/barqium/services/control-api/internal/db"
 	"github.com/yasserrmd/barqium/services/control-api/internal/handler"
+	apimiddleware "github.com/yasserrmd/barqium/services/control-api/internal/middleware"
 	"github.com/yasserrmd/barqium/services/control-api/internal/sqlc/sqlcgen"
 )
 
@@ -50,7 +51,14 @@ func main() {
 
 	r.Get("/health", handler.Health(pool))
 
+	oidcMiddleware := apimiddleware.OIDC(apimiddleware.OIDCConfig{
+		JWKSURL:  cfg.OIDCJWKSURL,
+		Audience: cfg.OIDCAudience,
+		Issuer:   cfg.OIDCIssuer,
+	})
+
 	r.Route("/api/v1", func(r chi.Router) {
+		r.Use(oidcMiddleware)
 		r.Route("/tenants", func(r chi.Router) {
 			handler.Tenants(r, q)
 			r.Route("/{tenantId}/upstreams", func(r chi.Router) {
