@@ -1,0 +1,9 @@
+[package]
+name        = "barqium-telemetry"
+description = "OTLP exporter and Kafka producer for Barqium request telemetry."
+version.workspace   = true
+edition.workspace   = true
+authors.workspace   = true
+license.workspace   = true
+
+[dependencies]

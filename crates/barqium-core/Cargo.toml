@@ -1,0 +1,9 @@
+[package]
+name        = "barqium-core"
+description = "Barqium HTTP/1.1 proxy runtime."
+version.workspace   = true
+edition.workspace   = true
+authors.workspace   = true
+license.workspace   = true
+
+[dependencies]

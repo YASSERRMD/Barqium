@@ -1,0 +1,13 @@
+[package]
+name        = "barqium-snapshot"
+description = "Snapshot compiler: consumes Kafka config events and writes shared-memory snapshots."
+version.workspace   = true
+edition.workspace   = true
+authors.workspace   = true
+license.workspace   = true
+
+[[bin]]
+name = "barqium-snapshot"
+path = "src/main.rs"
+
+[dependencies]

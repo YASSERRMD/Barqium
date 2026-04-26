@@ -1,0 +1,9 @@
+[package]
+name        = "barqium-mcp"
+description = "MCP client and server roles, tool registry, per-tool RBAC."
+version.workspace   = true
+edition.workspace   = true
+authors.workspace   = true
+license.workspace   = true
+
+[dependencies]

@@ -1,0 +1,41 @@
+# Rust
+/target/
+crates/*/target/
+**/*.rs.bk
+Cargo.lock
+
+# Go
+vendor/
+*.exe
+services/*/go.sum
+
+# Node / UI
+ui/admin/node_modules/
+ui/admin/dist/
+ui/admin/.vite/
+node_modules/
+package-lock.json
+
+# Secrets
+.env
+.env.*
+*.pem
+*.key
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Tooling state
+.mise.toml.local
+.direnv/
+
+# Build artefacts
+deploy/helm/*.tgz
+benchmarks/target/

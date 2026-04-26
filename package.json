@@ -1,0 +1,12 @@
+{
+  "name": "barqium",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Barqium monorepo tooling root",
+  "workspaces": ["ui/admin"],
+  "scripts": {
+    "dev:ui": "cd ui/admin && npm run dev",
+    "build:ui": "cd ui/admin && npm run build",
+    "test:ui": "cd ui/admin && npm test"
+  }
+}

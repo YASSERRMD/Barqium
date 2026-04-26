@@ -1,0 +1,9 @@
+[package]
+name        = "barqium-protocols"
+description = "Protocol adapters: HTTP/1, HTTP/2, gRPC, WebSocket, SSE, MCP."
+version.workspace   = true
+edition.workspace   = true
+authors.workspace   = true
+license.workspace   = true
+
+[dependencies]

@@ -1,0 +1,9 @@
+[package]
+name        = "barqium-policy"
+description = "Policy chain evaluator: JWT, API keys, rate limits, ABAC."
+version.workspace   = true
+edition.workspace   = true
+authors.workspace   = true
+license.workspace   = true
+
+[dependencies]
