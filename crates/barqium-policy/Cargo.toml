@@ -13,5 +13,6 @@ serde_json   = { workspace = true }
 jsonwebtoken = { workspace = true }
 reqwest      = { workspace = true }
 arc-swap     = { workspace = true }
+ring         = { workspace = true }
 thiserror    = { workspace = true }
 tracing      = { workspace = true }
