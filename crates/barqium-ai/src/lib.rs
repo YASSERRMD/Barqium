@@ -1,6 +1,7 @@
 //! Unified AI provider abstraction: OpenAI, Anthropic, Bedrock, Groq, Ollama, vLLM.
 
 pub mod budget;
+pub mod cache;
 pub mod error;
 pub mod fallback;
 pub mod provider;
