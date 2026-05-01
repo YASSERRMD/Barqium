@@ -54,6 +54,7 @@ The smoke test runs **23 end-to-end checks**: tenant creation, route/upstream CR
 
 ---
 
+
 ## Architecture
 
 <div align="center">
