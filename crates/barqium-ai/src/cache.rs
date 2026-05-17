@@ -93,20 +93,26 @@ impl SemanticCache {
     }
 
     fn rebuild_index(&self) {
-        let entries = self.entries.read().expect("entries read lock");
-        if entries.is_empty() {
-            return;
-        }
-        let points: Vec<EmbPoint> = entries
-            .iter()
-            .map(|e| EmbPoint(e.embedding.clone()))
-            .collect();
-        let values: Vec<usize> = (0..points.len()).collect();
+        // Collect the data we need while holding the read lock, then release
+        // it before the expensive HNSW build and the write-lock acquisition to
+        // minimise contention on the entries RwLock.
+        let points: Vec<EmbPoint> = {
+            let entries = self.entries.read().expect("entries read lock");
+            if entries.is_empty() {
+                return;
+            }
+            entries
+                .iter()
+                .map(|e| EmbPoint(e.embedding.clone()))
+                .collect()
+        };
+
+        let n = points.len();
+        let values: Vec<usize> = (0..n).collect();
         let new_index = Builder::default().build(points, values);
-        drop(entries);
 
         let mut index = self.index.write().expect("index write lock");
         *index = Some(new_index);
-        debug!("semantic cache HNSW index rebuilt");
+        debug!(entries = n, "semantic cache HNSW index rebuilt");
     }
 }
