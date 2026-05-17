@@ -14,6 +14,24 @@ import (
 	"github.com/yasserrmd/barqium/services/control-api/internal/sqlc/sqlcgen"
 )
 
+// checkUpstreamInTenant validates that upstreamID belongs to tenantID. On
+// failure it writes the appropriate error response and returns false.
+func checkUpstreamInTenant(w http.ResponseWriter, r *http.Request, q *sqlcgen.Queries, upstreamID uuid.UUID, tenantID uuid.UUID, caller string) bool {
+	if _, err := q.GetUpstream(r.Context(), sqlcgen.GetUpstreamParams{
+		ID:       upstreamID,
+		TenantID: tenantID,
+	}); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			writeError(w, http.StatusUnprocessableEntity, "upstream_id not found in tenant")
+			return false
+		}
+		slog.ErrorContext(r.Context(), caller+": upstream lookup error", "error", err)
+		writeError(w, http.StatusInternalServerError, "internal error")
+		return false
+	}
+	return true
+}
+
 // Routes mounts all route resources under a tenant-scoped router.
 func Routes(r chi.Router, q *sqlcgen.Queries) {
 	r.Post("/", createRoute(q))
@@ -58,16 +76,7 @@ func createRoute(q *sqlcgen.Queries) http.HandlerFunc {
 		}
 
 		// FK validation: ensure upstream belongs to same tenant.
-		if _, err := q.GetUpstream(r.Context(), sqlcgen.GetUpstreamParams{
-			ID:       req.UpstreamID,
-			TenantID: tenantID,
-		}); err != nil {
-			if errors.Is(err, pgx.ErrNoRows) {
-				writeError(w, http.StatusUnprocessableEntity, "upstream_id not found in tenant")
-				return
-			}
-			slog.ErrorContext(r.Context(), "createRoute: upstream lookup error", "error", err)
-			writeError(w, http.StatusInternalServerError, "internal error")
+		if !checkUpstreamInTenant(w, r, q, req.UpstreamID, tenantID, "createRoute") {
 			return
 		}
 
@@ -200,17 +209,7 @@ func updateRoute(q *sqlcgen.Queries) http.HandlerFunc {
 		}
 		upstreamID := existing.UpstreamID
 		if req.UpstreamID != nil {
-			// Validate the new upstream belongs to the same tenant.
-			if _, err := q.GetUpstream(r.Context(), sqlcgen.GetUpstreamParams{
-				ID:       *req.UpstreamID,
-				TenantID: tenantID,
-			}); err != nil {
-				if errors.Is(err, pgx.ErrNoRows) {
-					writeError(w, http.StatusUnprocessableEntity, "upstream_id not found in tenant")
-					return
-				}
-				slog.ErrorContext(r.Context(), "updateRoute: upstream lookup error", "error", err)
-				writeError(w, http.StatusInternalServerError, "internal error")
+			if !checkUpstreamInTenant(w, r, q, *req.UpstreamID, tenantID, "updateRoute") {
 				return
 			}
 			upstreamID = *req.UpstreamID
