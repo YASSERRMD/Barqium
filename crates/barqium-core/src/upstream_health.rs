@@ -26,7 +26,13 @@ impl UpstreamHealth {
     }
 
     pub fn set(&self, upstream_id: &str, healthy: bool) {
-        self.healthy.insert(upstream_id.to_string(), healthy);
+        // Update in-place when the key exists to avoid a heap allocation for
+        // the owned key on every probe tick.
+        if let Some(mut v) = self.healthy.get_mut(upstream_id) {
+            *v = healthy;
+        } else {
+            self.healthy.insert(upstream_id.to_string(), healthy);
+        }
     }
 }
 
