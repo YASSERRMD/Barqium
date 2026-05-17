@@ -27,6 +27,25 @@ ok()   { echo "  [PASS] $*"; PASS=$((PASS + 1)); }
 fail() { echo "  [FAIL] $*"; FAIL=$((FAIL + 1)); }
 step() { echo; echo "==> $*"; }
 
+# Wait until a curl probe of URL returns HTTP 200, or time out.
+# Usage: wait_for_200 <url> <max_attempts> <sleep_secs>
+wait_for_200() {
+  local url="$1"
+  local max="${2:-30}"
+  local interval="${3:-0.5}"
+  local attempt=0
+  while [ "$attempt" -lt "$max" ]; do
+    local code
+    code=$(curl -fsS -o /dev/null -w "%{http_code}" "$url" 2>/dev/null || echo "000")
+    if [ "$code" = "200" ]; then
+      return 0
+    fi
+    attempt=$((attempt + 1))
+    sleep "$interval"
+  done
+  return 1
+}
+
 # ---------------------------------------------------------------------------
 step "1. Control-API health"
 # ---------------------------------------------------------------------------
@@ -148,9 +167,12 @@ fi
 # ---------------------------------------------------------------------------
 step "10. Wait for snapshot propagation (outbox -> Kafka -> snapshot compiler)"
 # ---------------------------------------------------------------------------
-echo "    sleeping 5s for event pipeline..."
-sleep 5
-ok "propagation wait done"
+echo "    polling data-plane until route is live (up to 15s)..."
+if wait_for_200 "$DATAPLANE/smoke" 30 0.5; then
+  ok "snapshot propagated — data-plane returned 200 for GET /smoke"
+else
+  fail "data-plane did not return 200 within 15s (snapshot pipeline may be stalled)"
+fi
 
 # ---------------------------------------------------------------------------
 step "11. Hit the data-plane proxy"
@@ -160,7 +182,7 @@ STATUS=$(curl -fsS -o /dev/null -w "%{http_code}" \
 if [ "$STATUS" = "200" ]; then
   ok "data-plane returned 200 for GET /smoke"
 elif [ "$STATUS" = "404" ]; then
-  fail "data-plane returned 404 (snapshot may not have propagated; retry after longer wait)"
+  fail "data-plane returned 404 (snapshot may not have propagated)"
 else
   fail "data-plane returned unexpected status: $STATUS"
 fi
