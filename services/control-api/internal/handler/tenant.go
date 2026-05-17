@@ -17,6 +17,17 @@ import (
 
 var slugRe = regexp.MustCompile(`^[a-z0-9]([a-z0-9\-]{0,61}[a-z0-9])?$`)
 
+// validateSlug checks that slug matches the allowed pattern. On failure it
+// writes the 422 error response and returns false.
+func validateSlug(w http.ResponseWriter, slug string) bool {
+	if !slugRe.MatchString(slug) {
+		writeError(w, http.StatusUnprocessableEntity,
+			"slug must be lowercase alphanumeric with hyphens, 2-63 chars")
+		return false
+	}
+	return true
+}
+
 // Tenants mounts all tenant routes on the given router.
 func Tenants(r chi.Router, q *sqlcgen.Queries) {
 	r.Post("/", createTenant(q))
@@ -58,9 +69,7 @@ func createTenant(q *sqlcgen.Queries) http.HandlerFunc {
 			writeError(w, http.StatusUnprocessableEntity, "name is required")
 			return
 		}
-		if !slugRe.MatchString(req.Slug) {
-			writeError(w, http.StatusUnprocessableEntity,
-				"slug must be lowercase alphanumeric with hyphens, 2-63 chars")
+		if !validateSlug(w, req.Slug) {
 			return
 		}
 
@@ -180,9 +189,7 @@ func updateTenant(q *sqlcgen.Queries) http.HandlerFunc {
 		}
 		slug := existing.Slug
 		if req.Slug != "" {
-			if !slugRe.MatchString(req.Slug) {
-				writeError(w, http.StatusUnprocessableEntity,
-					"slug must be lowercase alphanumeric with hyphens, 2-63 chars")
+			if !validateSlug(w, req.Slug) {
 				return
 			}
 			slug = req.Slug
