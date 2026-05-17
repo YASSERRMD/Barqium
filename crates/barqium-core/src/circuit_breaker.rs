@@ -53,64 +53,80 @@ impl CircuitBreakerRegistry {
 
     /// Returns `true` when the upstream is allowed to receive a request.
     pub fn allow(&self, upstream_id: &str) -> bool {
-        let mut entry = self
-            .breakers
-            .entry(upstream_id.to_string())
-            .or_insert_with(BreakerState::new);
+        // Perform all state mutations inside a tight scope so the DashMap
+        // shard lock is released before we emit log events.
+        let (allowed, transitioned_to_half_open) = {
+            let mut entry = self
+                .breakers
+                .entry(upstream_id.to_string())
+                .or_insert_with(BreakerState::new);
 
-        match entry.state {
-            CircuitState::Closed => true,
-            CircuitState::HalfOpen => true,
-            CircuitState::Open => {
-                let elapsed = entry
-                    .opened_at
-                    .map(|t| t.elapsed())
-                    .unwrap_or(Duration::ZERO);
-                if elapsed >= self.reset_timeout {
-                    info!(upstream_id, "circuit breaker -> half-open");
-                    entry.state = CircuitState::HalfOpen;
-                    entry.consecutive_failures = 0;
-                    true
-                } else {
-                    false
+            match entry.state {
+                CircuitState::Closed | CircuitState::HalfOpen => (true, false),
+                CircuitState::Open => {
+                    let elapsed = entry
+                        .opened_at
+                        .map(|t| t.elapsed())
+                        .unwrap_or(Duration::ZERO);
+                    if elapsed >= self.reset_timeout {
+                        entry.state = CircuitState::HalfOpen;
+                        entry.consecutive_failures = 0;
+                        (true, true)
+                    } else {
+                        (false, false)
+                    }
                 }
             }
+        };
+
+        if transitioned_to_half_open {
+            info!(upstream_id, "circuit breaker -> half-open");
         }
+        allowed
     }
 
     /// Record a successful response from an upstream.
     pub fn record_success(&self, upstream_id: &str) {
-        let mut entry = self
-            .breakers
-            .entry(upstream_id.to_string())
-            .or_insert_with(BreakerState::new);
+        let was_open = {
+            let mut entry = self
+                .breakers
+                .entry(upstream_id.to_string())
+                .or_insert_with(BreakerState::new);
+            let was = entry.state != CircuitState::Closed;
+            entry.state = CircuitState::Closed;
+            entry.consecutive_failures = 0;
+            was
+        };
 
-        if entry.state != CircuitState::Closed {
+        if was_open {
             info!(upstream_id, "circuit breaker -> closed");
         }
-        entry.state = CircuitState::Closed;
-        entry.consecutive_failures = 0;
     }
 
     /// Record a failure (5xx or timeout) from an upstream.
     pub fn record_failure(&self, upstream_id: &str) {
-        let mut entry = self
-            .breakers
-            .entry(upstream_id.to_string())
-            .or_insert_with(BreakerState::new);
+        let log_open = {
+            let mut entry = self
+                .breakers
+                .entry(upstream_id.to_string())
+                .or_insert_with(BreakerState::new);
 
-        entry.consecutive_failures += 1;
+            entry.consecutive_failures += 1;
 
-        if entry.state == CircuitState::HalfOpen
-            || entry.consecutive_failures >= self.failure_threshold
-        {
-            warn!(
-                upstream_id,
-                failures = entry.consecutive_failures,
-                "circuit breaker -> open"
-            );
-            entry.state = CircuitState::Open;
-            entry.opened_at = Some(Instant::now());
+            if entry.state == CircuitState::HalfOpen
+                || entry.consecutive_failures >= self.failure_threshold
+            {
+                let failures = entry.consecutive_failures;
+                entry.state = CircuitState::Open;
+                entry.opened_at = Some(Instant::now());
+                Some(failures)
+            } else {
+                None
+            }
+        };
+
+        if let Some(failures) = log_open {
+            warn!(upstream_id, failures, "circuit breaker -> open");
         }
     }
 
