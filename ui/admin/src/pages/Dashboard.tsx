@@ -3,6 +3,10 @@ import { Activity, CheckCircle2, XCircle, Clock, Zap } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 
+// Honour VITE_API_URL when set (e.g. staging/prod deployments behind a CDN
+// where the API lives on a different origin or sub-path).
+const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? ''
+
 interface HealthResponse {
   status: string
   db: string
@@ -48,7 +52,7 @@ export function DashboardPage() {
   const { data: health, isError: healthError } = useQuery<HealthResponse>({
     queryKey: ['health'],
     queryFn: async () => {
-      const res = await fetch('/health')
+      const res = await fetch(`${API_BASE}/health`)
       if (!res.ok) throw new Error('health check failed')
       return res.json()
     },
