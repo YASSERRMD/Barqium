@@ -69,6 +69,14 @@ func createTenant(q *sqlcgen.Queries) http.HandlerFunc {
 			writeError(w, http.StatusUnprocessableEntity, "name is required")
 			return
 		}
+		if len(req.Name) > 100 {
+			writeError(w, http.StatusUnprocessableEntity, "name must not exceed 100 characters")
+			return
+		}
+		if len(req.Slug) > 63 {
+			writeError(w, http.StatusUnprocessableEntity, "slug must not exceed 63 characters")
+			return
+		}
 		if !validateSlug(w, req.Slug) {
 			return
 		}
@@ -185,10 +193,18 @@ func updateTenant(q *sqlcgen.Queries) http.HandlerFunc {
 		// Patch: only override fields that are provided.
 		name := existing.Name
 		if req.Name != "" {
+			if len(req.Name) > 100 {
+				writeError(w, http.StatusUnprocessableEntity, "name must not exceed 100 characters")
+				return
+			}
 			name = req.Name
 		}
 		slug := existing.Slug
 		if req.Slug != "" {
+			if len(req.Slug) > 63 {
+				writeError(w, http.StatusUnprocessableEntity, "slug must not exceed 63 characters")
+				return
+			}
 			if !validateSlug(w, req.Slug) {
 				return
 			}
