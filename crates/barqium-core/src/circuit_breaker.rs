@@ -45,6 +45,25 @@ impl CircuitBreakerMetrics {
     }
 }
 
+/// An event emitted by the circuit breaker when its state changes or a
+/// call is completed.
+///
+/// Subscribe to these events to feed circuit breaker activity into an
+/// event bus or structured audit log.
+#[derive(Debug, Clone)]
+pub enum CircuitBreakerEvent {
+    /// The circuit transitioned from Closed or HalfOpen to Open.
+    Opened(Instant),
+    /// The circuit transitioned from Open or HalfOpen back to Closed.
+    Closed(Instant),
+    /// The circuit transitioned from Open to HalfOpen (recovery probe).
+    HalfOpened(Instant),
+    /// A call through the circuit completed successfully.
+    CallSucceeded,
+    /// A call through the circuit failed.
+    CallFailed,
+}
+
 /// Configuration parameters for a circuit breaker instance.
 ///
 /// Passed to [`CircuitBreakerRegistry::new`] (or a future per-upstream
