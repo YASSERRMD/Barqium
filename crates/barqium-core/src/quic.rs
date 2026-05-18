@@ -129,6 +129,41 @@ impl QuicMetrics {
     }
 }
 
+/// Health probe for the QUIC endpoint.
+///
+/// Used by liveness and readiness checks to confirm that the QUIC
+/// socket is bound and accepting connections.
+#[derive(Debug, Clone)]
+pub struct QuicHealthCheck {
+    /// The address the QUIC endpoint is expected to be bound to.
+    pub listen_addr: SocketAddr,
+    /// Whether the endpoint has been started and is currently bound.
+    bound: Arc<std::sync::atomic::AtomicBool>,
+}
+
+impl QuicHealthCheck {
+    /// Create a new health-check probe for `listen_addr`.
+    ///
+    /// `bound` should be set to `true` once `serve_quic` successfully binds
+    /// the endpoint and starts accepting connections.
+    pub fn new(listen_addr: SocketAddr) -> Self {
+        Self {
+            listen_addr,
+            bound: Arc::new(std::sync::atomic::AtomicBool::new(false)),
+        }
+    }
+
+    /// Signal that the QUIC socket is now listening.
+    pub fn set_listening(&self) {
+        self.bound.store(true, Ordering::Relaxed);
+    }
+
+    /// Return `true` if the QUIC socket is currently bound and listening.
+    pub fn is_listening(&self) -> bool {
+        self.bound.load(Ordering::Relaxed)
+    }
+}
+
 /// Returns the value of the `Alt-Svc` header for a given QUIC port.
 ///
 /// Clients that receive this header will know they can upgrade the next
