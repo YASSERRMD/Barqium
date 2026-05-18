@@ -164,6 +164,19 @@ impl QuicHealthCheck {
     }
 }
 
+/// Return `true` if QUIC connection migration is supported in this build.
+///
+/// Connection migration lets a QUIC client seamlessly change its IP address
+/// or port (e.g. moving from Wi-Fi to cellular) without dropping the
+/// connection. Support is gated behind the `quic-migration` Cargo feature
+/// flag so operators can disable it in constrained environments.
+///
+/// # Feature flag
+/// Compile with `--features quic-migration` to enable.
+pub fn quic_connection_migration_supported() -> bool {
+    cfg!(feature = "quic-migration")
+}
+
 /// Returns the value of the `Alt-Svc` header for a given QUIC port.
 ///
 /// Clients that receive this header will know they can upgrade the next
