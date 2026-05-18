@@ -41,6 +41,47 @@ impl SoapEnvelope {
     }
 }
 
+/// A structured SOAP fault returned in the body of an error response.
+///
+/// Maps to the `<soap:Fault>` element defined in both SOAP 1.1 and SOAP 1.2.
+/// For SOAP 1.2 the `faultactor` becomes the `Node` or `Role` sub-element.
+#[derive(Debug, Clone)]
+pub struct SoapFault {
+    /// The fault code identifying the category of error.
+    ///
+    /// SOAP 1.1 examples: `soap:Server`, `soap:Client`.
+    /// SOAP 1.2 examples: `env:Receiver`, `env:Sender`.
+    pub faultcode: String,
+
+    /// A human-readable explanation of the fault.
+    pub faultstring: String,
+
+    /// URI identifying the endpoint where the fault occurred, if known.
+    ///
+    /// Optional in both SOAP versions.
+    pub faultactor: Option<String>,
+}
+
+impl SoapFault {
+    /// Create a server-side fault with the given message.
+    pub fn server_error(message: impl Into<String>) -> Self {
+        Self {
+            faultcode: "soap:Server".into(),
+            faultstring: message.into(),
+            faultactor: None,
+        }
+    }
+
+    /// Create a client-side fault with the given message.
+    pub fn client_error(message: impl Into<String>) -> Self {
+        Self {
+            faultcode: "soap:Client".into(),
+            faultstring: message.into(),
+            faultactor: None,
+        }
+    }
+}
+
 /// Information extracted from a SOAP request.
 #[derive(Debug, Clone)]
 pub struct SoapAction {
