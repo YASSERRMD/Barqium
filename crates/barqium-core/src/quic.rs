@@ -84,6 +84,22 @@ impl QuicConnectionPool {
     }
 }
 
+/// Returns the value of the `Alt-Svc` header for a given QUIC port.
+///
+/// Clients that receive this header will know they can upgrade the next
+/// request to HTTP/3 over QUIC. The `ma` (max-age) is set to 86400 seconds
+/// (24 hours), which is the recommended default.
+///
+/// # Example
+/// ```
+/// # use barqium_core::quic::alt_svc_header_value;
+/// let val = alt_svc_header_value(443);
+/// assert_eq!(val, r#"h3=":443"; ma=86400"#);
+/// ```
+pub fn alt_svc_header_value(port: u16) -> String {
+    format!("h3=\":{port}\"; ma=86400")
+}
+
 /// Build a [`quinn::ServerConfig`] from an existing rustls [`ServerConfig`].
 ///
 /// ALPN is set to `h3` so HTTP/3 clients can negotiate the protocol.
