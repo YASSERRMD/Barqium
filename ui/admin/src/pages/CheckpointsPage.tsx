@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, History } from 'lucide-react'
+import { Plus, History, Clock, Archive } from 'lucide-react'
 import { PageHeader } from '@/components/ui/empty-state'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Modal } from '@/components/ui/modal'
@@ -111,6 +111,44 @@ export function CheckpointsPage() {
           onCancel={() => setCreating(false)}
         />
       </Modal>
+
+      {/* Retention info panel */}
+      <div className="mt-8 card p-5">
+        <div className="flex items-start gap-3">
+          <div className="w-9 h-9 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center flex-shrink-0">
+            <Archive size={18} className="text-gray-500 dark:text-gray-400" />
+          </div>
+          <div className="flex-1">
+            <h3 className="font-semibold text-navy dark:text-white text-sm mb-2">Checkpoint Retention</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-3">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Clock size={13} className="text-gray-400" />
+                  <p className="text-xs font-semibold text-gray-600 dark:text-gray-300">Max Retention</p>
+                </div>
+                <p className="text-sm font-bold text-navy dark:text-white">30 days</p>
+              </div>
+              <div className="rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-3">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <History size={13} className="text-gray-400" />
+                  <p className="text-xs font-semibold text-gray-600 dark:text-gray-300">Max Checkpoints</p>
+                </div>
+                <p className="text-sm font-bold text-navy dark:text-white">100</p>
+              </div>
+              <div className="rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-3">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Archive size={13} className="text-gray-400" />
+                  <p className="text-xs font-semibold text-gray-600 dark:text-gray-300">Stored</p>
+                </div>
+                <p className="text-sm font-bold text-navy dark:text-white">{cpList.length} / 100</p>
+              </div>
+            </div>
+            <p className="text-xs text-gray-400 mt-3">
+              Checkpoints older than 30 days or exceeding the limit are automatically purged. Pinned checkpoints are excluded from automatic purge.
+            </p>
+          </div>
+        </div>
+      </div>
 
       <RollbackConfirmModal
         open={!!rollbackTarget}
