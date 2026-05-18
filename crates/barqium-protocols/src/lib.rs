@@ -54,7 +54,11 @@ impl ProtocolMetrics {
     }
 }
 
-pub use graphql::{detect as detect_graphql, GraphQlError, GraphQlInfo, GraphQlQuery, GraphQlResponse, OperationType, PersistedQueryStore};
-pub use handler::ProtocolHandler;
+pub use graphql::{
+    detect as detect_graphql, GraphQlError, GraphQlInfo, GraphQlQuery, GraphQlResponse,
+    OperationType, PersistedQueryStore,
+};
+pub use handler::{HandlerRequest, HandlerResponse, ProtocolHandler};
 pub use protocol::{detect_protocol, Protocol};
 pub use soap::{parse_soap_action, wrap_fault, SoapEnvelope, SoapFault, SoapVersion};
+// ProtocolMetrics is defined in this module and automatically public.
