@@ -116,3 +116,29 @@ socket2 = { version = "0.5", features = ["all"] }
 # Testing and benchmarks
 proptest  = { version = "1" }
 criterion = { version = "0.5", features = ["html_reports"] }
+
+# ---------------------------------------------------------------------------
+# Build profiles
+# ---------------------------------------------------------------------------
+
+[profile.release]
+opt-level = 3
+
+# Edge profile — minimal binary for CDN/edge nodes.
+# Inherits from release and applies additional size-reduction flags.
+#
+# Usage:
+#   cargo build --profile edge --no-default-features --features edge
+#
+# opt-level 3    — maximum instruction-level optimisation
+# lto = "thin"   — cross-crate inlining without full LTO compile-time cost
+# codegen-units = 1 — single CGU for better cross-function optimisation
+# panic = "abort" — removes unwinding machinery (~50 kB savings)
+# strip = true   — strips debug symbols from the final ELF/Mach-O
+[profile.edge]
+inherits = "release"
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+panic = "abort"
+strip = true
