@@ -4,6 +4,41 @@ use std::time::{Duration, Instant};
 use dashmap::DashMap;
 use tracing::{info, warn};
 
+/// Configuration parameters for a circuit breaker instance.
+///
+/// Passed to [`CircuitBreakerRegistry::new`] (or a future per-upstream
+/// constructor) to tune the failure detection and recovery behaviour.
+#[derive(Debug, Clone)]
+pub struct CircuitBreakerConfig {
+    /// Number of consecutive failures required to open the circuit.
+    ///
+    /// A lower value reacts faster to outages but may cause false positives
+    /// under transient errors. Defaults to `5`.
+    pub failure_threshold: u32,
+
+    /// Seconds the circuit remains open before transitioning to half-open.
+    ///
+    /// During this window all requests are rejected immediately. Defaults
+    /// to `30` seconds.
+    pub recovery_timeout_secs: u64,
+
+    /// Maximum number of probe requests allowed in the half-open state.
+    ///
+    /// Once this many requests succeed the circuit closes; any failure
+    /// re-opens it. Defaults to `1`.
+    pub half_open_max_calls: u32,
+}
+
+impl Default for CircuitBreakerConfig {
+    fn default() -> Self {
+        Self {
+            failure_threshold: 5,
+            recovery_timeout_secs: 30,
+            half_open_max_calls: 1,
+        }
+    }
+}
+
 /// The observable state of a single circuit breaker.
 ///
 /// State transitions follow the standard three-state model:
