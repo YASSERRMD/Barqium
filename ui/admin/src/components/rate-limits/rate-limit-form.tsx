@@ -13,9 +13,9 @@ interface RateLimitFormProps {
 }
 
 const PRESETS = {
-  strict:     { name: 'Strict',      rate_limit: 10,  window_secs: 60,   burst_limit: 15,  algorithm: 'sliding_window'  as Algorithm },
-  normal:     { name: 'Normal',      rate_limit: 100, window_secs: 60,   burst_limit: 150, algorithm: 'token_bucket'    as Algorithm },
-  permissive: { name: 'Permissive',  rate_limit: 500, window_secs: 60,   burst_limit: 750, algorithm: 'fixed_window'    as Algorithm },
+  strict:     { name: 'Strict',     rate_limit: 10,  window_secs: 60, burst_limit: 15,  algorithm: 'sliding_window' as Algorithm, description: '10 req/min — for sensitive endpoints' },
+  normal:     { name: 'Normal',     rate_limit: 100, window_secs: 60, burst_limit: 150, algorithm: 'token_bucket'   as Algorithm, description: '100 req/min — general use'           },
+  permissive: { name: 'Permissive', rate_limit: 500, window_secs: 60, burst_limit: 750, algorithm: 'fixed_window'  as Algorithm, description: '500 req/min — high-traffic APIs'     },
 }
 
 export function RateLimitForm({ initial, onSubmit, onCancel, submitLabel = 'Save' }: RateLimitFormProps) {
@@ -65,17 +65,21 @@ export function RateLimitForm({ initial, onSubmit, onCancel, submitLabel = 'Save
       {/* Presets */}
       <div>
         <p className="label mb-2">Quick Presets</p>
-        <div className="flex gap-2">
-          {(Object.keys(PRESETS) as (keyof typeof PRESETS)[]).map(preset => (
-            <button
-              key={preset}
-              type="button"
-              className="btn-ghost btn-xs capitalize"
-              onClick={() => applyPreset(preset)}
-            >
-              {preset}
-            </button>
-          ))}
+        <div className="grid grid-cols-3 gap-2">
+          {(Object.keys(PRESETS) as (keyof typeof PRESETS)[]).map(preset => {
+            const p = PRESETS[preset]
+            return (
+              <button
+                key={preset}
+                type="button"
+                className="border border-gray-200 dark:border-gray-700 rounded-lg p-2 text-left hover:border-gold hover:bg-gold/5 transition-colors"
+                onClick={() => applyPreset(preset)}
+              >
+                <p className="text-xs font-semibold text-navy dark:text-white capitalize">{p.name}</p>
+                <p className="text-xs text-gray-400 mt-0.5 leading-tight">{p.description}</p>
+              </button>
+            )
+          })}
         </div>
       </div>
 
