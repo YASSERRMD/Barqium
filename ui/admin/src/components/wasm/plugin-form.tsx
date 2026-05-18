@@ -11,10 +11,32 @@ interface PluginFormProps {
   submitLabel?: string
 }
 
-function validateSha256(sha: string): string | null {
+export function validateSha256(sha: string): string | null {
   if (!sha) return null
-  if (!/^[a-fA-F0-9]{64}$/.test(sha)) return 'SHA256 must be exactly 64 hex characters'
+  if (sha.length < 64) return `SHA256 needs ${64 - sha.length} more hex characters`
+  if (sha.length > 64) return 'SHA256 must be exactly 64 hex characters'
+  if (!/^[a-fA-F0-9]{64}$/.test(sha)) return 'SHA256 must contain only hex characters (0-9, a-f)'
   return null
+}
+
+export function Sha256ProgressBar({ value }: { value: string }) {
+  const pct = Math.min((value.length / 64) * 100, 100)
+  const isValid = value.length === 64 && !validateSha256(value)
+  const hasError = value.length > 0 && !isValid
+
+  return (
+    <div className="mt-1.5 space-y-1">
+      <div className="h-1 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+        <div
+          className={`h-full rounded-full transition-all ${isValid ? 'bg-emerald-500' : hasError ? 'bg-red-400' : 'bg-amber-400'}`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <p className={`text-xs ${isValid ? 'text-emerald-500' : 'text-gray-400'}`}>
+        {value.length}/64 characters{isValid ? ' — valid SHA256' : ''}
+      </p>
+    </div>
+  )
 }
 
 export function PluginForm({ initial, onSubmit, onCancel, submitLabel = 'Save' }: PluginFormProps) {
@@ -123,9 +145,7 @@ export function PluginForm({ initial, onSubmit, onCancel, submitLabel = 'Save' }
           maxLength={64}
         />
         {shaError && <p className="text-xs text-red-500 mt-1">{shaError}</p>}
-        {sha256 && !shaError && (
-          <p className="text-xs text-emerald-500 mt-1">Valid SHA256 checksum</p>
-        )}
+        {sha256 && <Sha256ProgressBar value={sha256} />}
       </div>
 
       <div className="flex items-center gap-3">
