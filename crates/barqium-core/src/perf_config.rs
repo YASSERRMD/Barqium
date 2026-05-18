@@ -4,6 +4,52 @@
 //! thread pool size, and socket-level buffer sizes. Use [`ConnectionPoolConfig`]
 //! to tune the upstream HTTP connection pool.
 
+/// Configuration for the upstream HTTP connection pool.
+///
+/// The connection pool is shared across all upstreams (unless per-upstream
+/// pooling is enabled). Tuning `max_idle_per_host` can dramatically reduce
+/// connection setup latency under sustained load.
+#[derive(Debug, Clone)]
+pub struct ConnectionPoolConfig {
+    /// Maximum number of idle keep-alive connections per upstream host.
+    ///
+    /// Setting this too low causes connection churn; too high wastes file
+    /// descriptors. Defaults to `10`.
+    pub max_idle_per_host: usize,
+
+    /// Maximum total number of connections (idle + active) in the pool.
+    ///
+    /// Set to `0` to disable the global cap. Defaults to `1024`.
+    pub max_total_connections: usize,
+
+    /// Idle timeout in seconds: connections unused for this long are closed.
+    ///
+    /// Prevents stale connections to upstreams that have closed their end.
+    /// Defaults to `90` seconds.
+    pub idle_timeout_secs: u64,
+}
+
+impl Default for ConnectionPoolConfig {
+    fn default() -> Self {
+        Self {
+            max_idle_per_host: 10,
+            max_total_connections: 1024,
+            idle_timeout_secs: 90,
+        }
+    }
+}
+
+impl ConnectionPoolConfig {
+    /// Create a pool config suitable for a high-throughput production service.
+    pub fn high_throughput() -> Self {
+        Self {
+            max_idle_per_host: 50,
+            max_total_connections: 4096,
+            idle_timeout_secs: 30,
+        }
+    }
+}
+
 /// Low-level performance tuning parameters for the Tokio runtime and OS sockets.
 ///
 /// These values are read at startup and passed to the Tokio runtime builder
