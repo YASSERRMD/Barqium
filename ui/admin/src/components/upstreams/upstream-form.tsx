@@ -9,10 +9,20 @@ interface UpstreamFormProps {
   submitLabel?: string
 }
 
-function validateUrl(url: string): string | null {
-  if (!url.trim()) return 'Base URL is required'
-  if (!url.startsWith('http://') && !url.startsWith('https://')) {
+export function validateUpstreamUrl(url: string): string | null {
+  const trimmed = url.trim()
+  if (!trimmed) return 'Base URL is required'
+  if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
     return 'Base URL must start with http:// or https://'
+  }
+  try {
+    const parsed = new URL(trimmed)
+    if (!parsed.hostname) return 'Base URL must include a valid hostname'
+    if (trimmed.endsWith('/') && trimmed !== `${parsed.protocol}//${parsed.host}/`) {
+      return 'Base URL should not include a trailing path — use routes for path-based routing'
+    }
+  } catch {
+    return 'Base URL is not a valid URL'
   }
   return null
 }
@@ -28,12 +38,12 @@ export function UpstreamForm({ initial, onSubmit, onCancel, submitLabel = 'Save'
 
   const handleUrlChange = (v: string) => {
     setBaseUrl(v)
-    setUrlError(validateUrl(v))
+    setUrlError(validateUpstreamUrl(v))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    const urlErr = validateUrl(baseUrl)
+    const urlErr = validateUpstreamUrl(baseUrl)
     if (urlErr) { setUrlError(urlErr); return }
     if (!name.trim()) return
     setError(null)
