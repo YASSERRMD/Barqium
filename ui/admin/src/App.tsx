@@ -11,6 +11,7 @@ import { RoutesPage } from './pages/RoutesPage'
 import { MetricsPage } from './pages/MetricsPage'
 import { AIProvidersPage } from './pages/AIProvidersPage'
 import { RateLimitsPage } from './pages/RateLimitsPage'
+import { WasmPluginsPage } from './pages/WasmPluginsPage'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -82,7 +83,7 @@ export function App() {
                   <Route path="consumers"    element={<StubPage name="Consumers" />} />
                   <Route path="ai-providers" element={<AIProvidersPage />} />
                   <Route path="rate-limits"  element={<RateLimitsPage />} />
-                  <Route path="wasm-plugins" element={<StubPage name="WASM Plugins" />} />
+                  <Route path="wasm-plugins" element={<WasmPluginsPage />} />
                   <Route path="audit"        element={<StubPage name="Audit Log" />} />
                   <Route path="checkpoints"  element={<StubPage name="Checkpoints" />} />
                   <Route path="regions"      element={<StubPage name="Regions" />} />
