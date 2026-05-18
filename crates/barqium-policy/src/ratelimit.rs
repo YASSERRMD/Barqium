@@ -65,7 +65,7 @@ impl RateLimiter {
         let estimate = (slot.prev_count as f64 * prev_weight) as u64 + slot.curr_count + 1;
 
         if estimate > max {
-            return Err(PolicyError::RateLimitExceeded);
+            return Err(PolicyError::RateLimitExceeded { retry_after_secs: window.as_secs() });
         }
 
         slot.curr_count += 1;

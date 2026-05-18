@@ -48,6 +48,7 @@ func main() {
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(30 * time.Second))
+	r.Use(securityHeadersMiddleware)
 
 	r.Get("/health", handler.Health(pool))
 	r.Get("/api/openapi.yaml", handler.OpenAPI())
@@ -129,6 +130,26 @@ func main() {
 	if err := srv.Shutdown(shutCtx); err != nil {
 		slog.Error("graceful shutdown failed", "error", err)
 	}
+}
+
+// securityHeadersMiddleware adds recommended security headers to every response.
+//
+// Headers applied:
+//   - X-Request-ID     — echoes the chi request ID for client-side correlation.
+//   - X-Content-Type-Options: nosniff — prevents MIME-sniffing attacks.
+//   - X-Frame-Options: DENY           — disallows embedding in iframes.
+//   - Strict-Transport-Security       — enforces HTTPS for 1 year with subdomains.
+func securityHeadersMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		reqID := middleware.GetReqID(r.Context())
+		if reqID != "" {
+			w.Header().Set("X-Request-ID", reqID)
+		}
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.Header().Set("X-Frame-Options", "DENY")
+		w.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+		next.ServeHTTP(w, r)
+	})
 }
 
 func setupLogger(level, format string) {
