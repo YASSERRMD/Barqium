@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, Globe } from 'lucide-react'
+import { Plus, Globe, GitMerge, Info } from 'lucide-react'
 import { PageHeader } from '@/components/ui/empty-state'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Modal } from '@/components/ui/modal'
@@ -75,6 +75,43 @@ export function RegionsPage() {
           ))}
         </div>
       )}
+
+      {/* MirrorMaker2 info section */}
+      <div className="mt-8 card p-5">
+        <div className="flex items-start gap-3">
+          <div className="w-9 h-9 rounded-lg bg-blue-50 dark:bg-blue-950 flex items-center justify-center flex-shrink-0 mt-0.5">
+            <GitMerge size={18} className="text-blue-500" />
+          </div>
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <h3 className="font-semibold text-navy dark:text-white text-sm">MirrorMaker 2 Replication</h3>
+              <span className="inline-flex items-center gap-1 text-xs text-blue-500">
+                <Info size={12} /> How it works
+              </span>
+            </div>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
+              Barqium uses Kafka MirrorMaker 2 to replicate configuration changes across regions in near-real-time.
+              Each region receives a copy of the routing and policy config via a dedicated replication group.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-3">
+                <p className="text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Replication Group ID</p>
+                <p className="text-xs font-code text-gray-500 dark:text-gray-400">
+                  barqium-mm2-{regionList.length > 0 ? regionList.find(r => r.is_primary)?.name ?? 'primary' : 'primary'}-replication
+                </p>
+              </div>
+              <div className="rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-3">
+                <p className="text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Active Regions</p>
+                <p className="text-xs font-code text-gray-500 dark:text-gray-400">
+                  {regionList.length > 0
+                    ? regionList.map(r => r.name).join(' → ')
+                    : 'No regions configured'}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <Modal
         open={creating}
