@@ -2,7 +2,9 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
 
-use quinn::{Endpoint, ServerConfig as QuinnServerConfig, TransportConfig};
+use bytes::Bytes;
+use dashmap::DashMap;
+use quinn::{Connection, Endpoint, ServerConfig as QuinnServerConfig, TransportConfig};
 use rustls::ServerConfig as RustlsServerConfig;
 use tracing::{debug, info};
 
@@ -35,6 +37,50 @@ impl Default for QuicConfig {
             enable_0rtt: true,
             max_concurrent_streams: 100,
         }
+    }
+}
+
+/// A pool of active QUIC connections keyed by remote peer address.
+///
+/// Allows the proxy to reuse existing QUIC connections to upstream hosts
+/// instead of re-establishing new ones for every request, reducing latency
+/// and connection overhead.
+#[derive(Debug, Default, Clone)]
+pub struct QuicConnectionPool {
+    connections: Arc<DashMap<SocketAddr, Arc<Connection>>>,
+}
+
+impl QuicConnectionPool {
+    /// Create a new, empty connection pool.
+    pub fn new() -> Self {
+        Self {
+            connections: Arc::new(DashMap::new()),
+        }
+    }
+
+    /// Insert or replace the connection for `peer`.
+    pub fn insert(&self, peer: SocketAddr, conn: Arc<Connection>) {
+        self.connections.insert(peer, conn);
+    }
+
+    /// Retrieve the live connection for `peer`, if any.
+    pub fn get(&self, peer: &SocketAddr) -> Option<Arc<Connection>> {
+        self.connections.get(peer).map(|r| Arc::clone(&*r))
+    }
+
+    /// Remove and drop the connection entry for `peer`.
+    pub fn remove(&self, peer: &SocketAddr) {
+        self.connections.remove(peer);
+    }
+
+    /// Return the number of tracked connections.
+    pub fn len(&self) -> usize {
+        self.connections.len()
+    }
+
+    /// Return `true` if the pool contains no connections.
+    pub fn is_empty(&self) -> bool {
+        self.connections.is_empty()
     }
 }
 
