@@ -126,8 +126,13 @@ pub struct GraphQlInfo {
 /// body to determine the operation type.
 ///
 /// Recognised content types:
-///   - `application/graphql+json`
-///   - `application/json` with a `query` key (Apollo-style)
+///   - `application/graphql+json` (preferred, per the GraphQL-over-HTTP spec)
+///   - `application/json` with a `query` key (Apollo-style — widely used)
+///
+/// # Returns
+/// `Some(GraphQlInfo)` when a GraphQL request is detected with at least a
+/// `query` field or a persisted-query hash. Returns `None` for non-GraphQL
+/// requests, malformed JSON, or JSON bodies without a `query` key.
 pub fn detect(content_type: &str, body: &Bytes) -> Option<GraphQlInfo> {
     let ct = content_type.split(';').next().unwrap_or("").trim();
     if ct != "application/graphql+json" && ct != "application/json" {
