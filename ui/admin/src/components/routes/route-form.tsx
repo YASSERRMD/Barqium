@@ -14,9 +14,12 @@ interface RouteFormProps {
   submitLabel?: string
 }
 
-function validatePathPrefix(path: string): string | null {
-  if (!path.trim()) return 'Path prefix is required'
-  if (!path.startsWith('/')) return 'Path prefix must start with /'
+export function validatePathPrefix(path: string): string | null {
+  const trimmed = path.trim()
+  if (!trimmed) return 'Path prefix is required'
+  if (!trimmed.startsWith('/')) return 'Path prefix must start with /'
+  if (trimmed.includes(' ')) return 'Path prefix must not contain spaces'
+  if (/[^a-zA-Z0-9/_\-.:*{}]/.test(trimmed)) return 'Path prefix contains invalid characters'
   return null
 }
 
