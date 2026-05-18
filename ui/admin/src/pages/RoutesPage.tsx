@@ -1,235 +1,253 @@
-import { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Trash2 } from 'lucide-react'
-import { routes, upstreams, tenants, type Route, type CreateRouteBody } from '@/api/client'
-import { Button } from '@/components/ui/button'
+import { useMemo, useState } from 'react'
+import { Plus, GitBranch } from 'lucide-react'
+import { PageHeader } from '@/components/ui/empty-state'
+import { DataTable, type Column } from '@/components/ui/data-table'
+import { SearchBar, FilterSelect } from '@/components/ui/search-bar'
 import { Badge } from '@/components/ui/badge'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+import { Modal } from '@/components/ui/modal'
+import { Pagination } from '@/components/ui/pagination'
+import { RouteForm } from '@/components/routes/route-form'
+import { RouteRowActions } from '@/components/routes/route-row-actions'
+import { RouteDetailPanel } from '@/components/routes/route-detail-panel'
+import { RouteStatsBar } from '@/components/routes/route-stats-bar'
+import { MethodBadge } from '@/components/routes/method-badge'
+import { RoutePathDisplay } from '@/components/routes/route-path-display'
+import { useRoutes, useCreateRoute, useUpdateRoute } from '@/hooks/use-routes'
+import { useTenants } from '@/hooks/use-tenants'
+import { useUpstreams } from '@/hooks/use-upstreams'
+import { useToast } from '@/components/ui/toast'
+import { formatDate } from '@/lib/date-utils'
+import type { Route } from '@/api/client'
 
-function CreateRouteDialog({
-  tenantId,
-  onClose,
-}: {
-  tenantId: string
-  onClose: () => void
-}) {
-  const qc = useQueryClient()
-  const [method, setMethod] = useState('*')
-  const [pathPrefix, setPathPrefix] = useState('/')
-  const [host, setHost] = useState('')
-  const [upstreamId, setUpstreamId] = useState('')
-
-  const { data: upstreamList } = useQuery({
-    queryKey: ['upstreams', tenantId],
-    queryFn: () => upstreams.list(tenantId),
-  })
-
-  const mutation = useMutation({
-    mutationFn: (body: CreateRouteBody) => routes.create(tenantId, body),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['routes', tenantId] })
-      onClose()
-    },
-  })
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    mutation.mutate({ method, path_prefix: pathPrefix, host, upstream_id: upstreamId })
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
-        <h2 className="font-heading text-lg font-bold text-navy mb-4">New Route</h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="flex gap-3">
-            <div className="w-28">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Method</label>
-              <select
-                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy/30"
-                value={method}
-                onChange={(e) => setMethod(e.target.value)}
-              >
-                {['*', 'GET', 'POST', 'PUT', 'PATCH', 'DELETE'].map((m) => (
-                  <option key={m} value={m}>
-                    {m}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Path Prefix</label>
-              <input
-                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy/30"
-                value={pathPrefix}
-                onChange={(e) => setPathPrefix(e.target.value)}
-                required
-              />
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Host <span className="text-gray-400 font-normal">(optional)</span>
-            </label>
-            <input
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy/30"
-              value={host}
-              onChange={(e) => setHost(e.target.value)}
-              placeholder="api.example.com"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Upstream</label>
-            <select
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy/30"
-              value={upstreamId}
-              onChange={(e) => setUpstreamId(e.target.value)}
-              required
-            >
-              <option value="">Select upstream...</option>
-              {upstreamList?.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          {mutation.isError && (
-            <p className="text-sm text-red-600">{String(mutation.error)}</p>
-          )}
-          <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={mutation.isPending}>
-              {mutation.isPending ? 'Creating...' : 'Create'}
-            </Button>
-          </div>
-        </form>
-      </div>
-    </div>
-  )
-}
+const PAGE_SIZE = 10
+const METHOD_OPTIONS = [
+  { label: 'All Methods', value: 'all' },
+  { label: 'ANY / *',     value: 'any' },
+  { label: 'GET',         value: 'GET' },
+  { label: 'POST',        value: 'POST' },
+  { label: 'PUT',         value: 'PUT' },
+  { label: 'DELETE',      value: 'DELETE' },
+  { label: 'PATCH',       value: 'PATCH' },
+]
 
 export function RoutesPage() {
-  const qc = useQueryClient()
   const [selectedTenant, setSelectedTenant] = useState('')
-  const [showCreate, setShowCreate] = useState(false)
+  const [search, setSearch]     = useState('')
+  const [status, setStatus]     = useState('all')
+  const [method, setMethod]     = useState('all')
+  const [page, setPage]         = useState(1)
+  const [creating, setCreating] = useState(false)
+  const [editing, setEditing]   = useState<Route | null>(null)
+  const [selected, setSelected] = useState<Route | null>(null)
 
-  const { data: tenantList } = useQuery({
-    queryKey: ['tenants'],
-    queryFn: () => tenants.list(),
+  const { toast } = useToast()
+  const { data: tenantList = [] } = useTenants()
+  const { data = [], isLoading, isError } = useRoutes(selectedTenant)
+  const { data: upstreamList = [] } = useUpstreams(selectedTenant)
+
+  const upstreamMap = useMemo(
+    () => Object.fromEntries(upstreamList.map(u => [u.id, u.name])),
+    [upstreamList],
+  )
+
+  const createMut = useCreateRoute(selectedTenant, () => {
+    toast({ title: 'Route created', variant: 'success' })
+    setCreating(false)
+  })
+  const editMut = useUpdateRoute(selectedTenant, editing?.id ?? '', () => {
+    toast({ title: 'Route updated', variant: 'success' })
+    setEditing(null)
   })
 
-  const { data, isLoading, isError } = useQuery({
-    queryKey: ['routes', selectedTenant],
-    queryFn: () => routes.list(selectedTenant),
-    enabled: !!selectedTenant,
-  })
+  const filtered = useMemo(() => {
+    let list = data
+    if (search) list = list.filter(r =>
+      r.path_prefix.toLowerCase().includes(search.toLowerCase()) ||
+      r.host?.toLowerCase().includes(search.toLowerCase()),
+    )
+    if (status === 'active')   list = list.filter(r => r.enabled)
+    if (status === 'inactive') list = list.filter(r => !r.enabled)
+    if (method !== 'all') {
+      list = list.filter(r => {
+        const m = (r.method === '*' || !r.method) ? 'any' : r.method.toUpperCase()
+        return method === 'any' ? m === 'any' : m === method.toUpperCase()
+      })
+    }
+    return list
+  }, [data, search, status, method])
 
-  const deleteMutation = useMutation({
-    mutationFn: (r: Route) => routes.delete(r.tenant_id, r.id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['routes', selectedTenant] }),
-  })
+  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
-  const handleDelete = (r: Route) => {
-    if (confirm(`Delete route "${r.method} ${r.path_prefix}"?`)) deleteMutation.mutate(r)
-  }
+  const columns: Column<Route>[] = [
+    {
+      key: 'route',
+      header: 'Route',
+      cell: r => (
+        <button
+          className="flex items-center gap-2 text-left hover:text-gold transition-colors"
+          onClick={() => setSelected(r)}
+        >
+          <MethodBadge method={r.method} />
+          <RoutePathDisplay pathPrefix={r.path_prefix} host={r.host} />
+        </button>
+      ),
+    },
+    {
+      key: 'upstream',
+      header: 'Upstream',
+      cell: r => (
+        <span className="text-sm text-gray-600 dark:text-gray-400">
+          {upstreamMap[r.upstream_id] ?? <span className="text-gray-300 italic">unknown</span>}
+        </span>
+      ),
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      width: '100px',
+      cell: r => <Badge variant={r.enabled ? 'success' : 'ghost'} dot>{r.enabled ? 'Active' : 'Inactive'}</Badge>,
+    },
+    {
+      key: 'created',
+      header: 'Created',
+      width: '120px',
+      cell: r => <span className="text-xs text-gray-500">{formatDate(r.created_at)}</span>,
+    },
+    {
+      key: 'actions',
+      header: '',
+      width: '100px',
+      align: 'right',
+      cell: r => <RouteRowActions route={r} onEdit={() => setEditing(r)} />,
+    },
+  ]
 
   return (
-    <div className="p-8">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="font-heading text-2xl font-bold text-navy">Routes</h1>
-          <p className="text-gray-500 text-sm mt-0.5">Manage traffic routes per tenant.</p>
-        </div>
-        <Button onClick={() => setShowCreate(true)} disabled={!selectedTenant}>
-          <Plus size={16} />
-          New Route
-        </Button>
-      </div>
+    <div className="p-8 max-w-[1200px] mx-auto animate-fade-in">
+      <PageHeader
+        title="Routes"
+        subtitle="Define routing rules that map traffic to upstream services."
+        action={
+          <button
+            className="btn-primary"
+            onClick={() => setCreating(true)}
+            disabled={!selectedTenant}
+            title={!selectedTenant ? 'Select a tenant first' : undefined}
+          >
+            <Plus size={15} /> New Route
+          </button>
+        }
+      />
 
-      <div className="mb-4">
+      {/* Tenant selector */}
+      <div className="mb-6">
+        <label className="label" htmlFor="route-tenant-select">Tenant</label>
         <select
-          className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy/30"
+          id="route-tenant-select"
+          className="input max-w-xs"
           value={selectedTenant}
-          onChange={(e) => setSelectedTenant(e.target.value)}
+          onChange={e => { setSelectedTenant(e.target.value); setPage(1); setSearch(''); setStatus('all'); setMethod('all') }}
         >
-          <option value="">Select tenant...</option>
-          {tenantList?.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.name} ({t.slug})
-            </option>
+          <option value="">Select a tenant…</option>
+          {tenantList.map(t => (
+            <option key={t.id} value={t.id}>{t.name} ({t.slug})</option>
           ))}
         </select>
       </div>
 
-      {!selectedTenant && (
-        <p className="text-gray-400 text-sm">Select a tenant to view its routes.</p>
-      )}
-      {selectedTenant && isLoading && <p className="text-gray-400 text-sm">Loading...</p>}
-      {selectedTenant && isError && (
-        <p className="text-red-600 text-sm">Failed to load routes.</p>
-      )}
-
-      {data && (
-        <div className="rounded-lg border bg-white">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Method</TableHead>
-                <TableHead>Path Prefix</TableHead>
-                <TableHead>Host</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {data.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center text-gray-400 py-8">
-                    No routes for this tenant.
-                  </TableCell>
-                </TableRow>
-              )}
-              {data.map((r) => (
-                <TableRow key={r.id}>
-                  <TableCell>
-                    <Badge variant="outline">{r.method}</Badge>
-                  </TableCell>
-                  <TableCell className="font-code text-xs">{r.path_prefix}</TableCell>
-                  <TableCell className="text-gray-500 text-xs">{r.host || '—'}</TableCell>
-                  <TableCell>
-                    <Badge variant={r.enabled ? 'success' : 'outline'}>
-                      {r.enabled ? 'enabled' : 'disabled'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <button
-                      onClick={() => handleDelete(r)}
-                      className="text-gray-400 hover:text-red-500 transition-colors"
-                      aria-label={`Delete ${r.path_prefix}`}
-                    >
-                      <Trash2 size={15} />
-                    </button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+      {!selectedTenant ? (
+        <div className="card p-8 text-center text-gray-400">
+          <GitBranch size={32} className="mx-auto mb-3 opacity-30" />
+          <p className="text-sm">Select a tenant to view its routes.</p>
         </div>
+      ) : (
+        <>
+          {data.length > 0 && (
+            <div className="mb-6">
+              <RouteStatsBar routes={data} />
+            </div>
+          )}
+
+          <div className="flex items-center gap-3 mb-4 flex-wrap">
+            <SearchBar
+              value={search}
+              onChange={v => { setSearch(v); setPage(1) }}
+              placeholder="Search path or host…"
+              className="w-64"
+            />
+            <FilterSelect
+              label="Method"
+              value={method}
+              onChange={v => { setMethod(v); setPage(1) }}
+              options={METHOD_OPTIONS}
+            />
+            <FilterSelect
+              label="Status"
+              value={status}
+              onChange={v => { setStatus(v); setPage(1) }}
+              options={[
+                { label: 'All',      value: 'all'      },
+                { label: 'Active',   value: 'active'   },
+                { label: 'Inactive', value: 'inactive' },
+              ]}
+            />
+          </div>
+
+          {isError && (
+            <div className="card p-4 border-red-200 bg-red-50 dark:bg-red-950 dark:border-red-800 mb-4">
+              <p className="text-sm text-red-600 dark:text-red-400">Failed to load routes. Is the control API running?</p>
+            </div>
+          )}
+
+          <DataTable
+            columns={columns}
+            data={paginated}
+            keyFn={r => r.id}
+            loading={isLoading}
+            emptyTitle={search || status !== 'all' || method !== 'all' ? 'No routes match your filters' : 'No routes yet'}
+            emptyDescription={!search && status === 'all' && method === 'all' ? 'Create your first route to start routing traffic.' : undefined}
+            emptyAction={
+              !search && status === 'all' && method === 'all'
+                ? <button className="btn-primary btn-sm" onClick={() => setCreating(true)}><Plus size={13} /> New Route</button>
+                : undefined
+            }
+          />
+
+          <Pagination
+            page={page}
+            pageSize={PAGE_SIZE}
+            total={filtered.length}
+            onPageChange={setPage}
+          />
+        </>
       )}
 
-      {showCreate && selectedTenant && (
-        <CreateRouteDialog tenantId={selectedTenant} onClose={() => setShowCreate(false)} />
-      )}
+      <Modal open={creating} onClose={() => setCreating(false)} title="New Route" description="Add a routing rule for this tenant." size="md">
+        <RouteForm
+          tenantId={selectedTenant}
+          onSubmit={body => createMut.mutateAsync(body)}
+          onCancel={() => setCreating(false)}
+          submitLabel="Create Route"
+        />
+      </Modal>
+
+      <Modal open={!!editing} onClose={() => setEditing(null)} title="Edit Route" size="md">
+        {editing && (
+          <RouteForm
+            tenantId={selectedTenant}
+            initial={editing}
+            onSubmit={body => editMut.mutateAsync(body)}
+            onCancel={() => setEditing(null)}
+            submitLabel="Save Changes"
+          />
+        )}
+      </Modal>
+
+      <RouteDetailPanel
+        route={selected}
+        onClose={() => setSelected(null)}
+        upstreamName={selected ? upstreamMap[selected.upstream_id] : undefined}
+      />
     </div>
   )
 }
