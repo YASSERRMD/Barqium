@@ -1,8 +1,49 @@
 use std::sync::Arc;
-use std::time::Duration;
+use std::time::{Duration, SystemTime};
 
 use dashmap::DashMap;
 use tracing::{debug, warn};
+
+/// Configuration for the upstream health-check loop.
+///
+/// Passed to [`HealthChecker::new`] (or a future builder) to control probe
+/// frequency, per-probe timeouts, and the number of consecutive
+/// passes/failures required to change status.
+#[derive(Debug, Clone)]
+pub struct HealthCheckConfig {
+    /// Interval in seconds between health probe cycles.
+    ///
+    /// All upstreams are probed once per cycle. Defaults to `10`.
+    pub interval_secs: u64,
+
+    /// Maximum milliseconds to wait for a single probe response.
+    ///
+    /// Probes that exceed this limit are recorded as failures. Defaults to `3000`.
+    pub timeout_ms: u64,
+
+    /// Number of consecutive successful probes before marking an upstream healthy.
+    ///
+    /// A value of `1` means a single success immediately clears an outage.
+    /// Defaults to `1`.
+    pub healthy_threshold: u32,
+
+    /// Number of consecutive failed probes before marking an upstream unhealthy.
+    ///
+    /// A value of `1` means a single failure immediately opens an alert.
+    /// Defaults to `3`.
+    pub unhealthy_threshold: u32,
+}
+
+impl Default for HealthCheckConfig {
+    fn default() -> Self {
+        Self {
+            interval_secs: 10,
+            timeout_ms: 3_000,
+            healthy_threshold: 1,
+            unhealthy_threshold: 3,
+        }
+    }
+}
 
 /// Shared, lock-free upstream health state.
 ///
