@@ -177,6 +177,23 @@ pub fn quic_connection_migration_supported() -> bool {
     cfg!(feature = "quic-migration")
 }
 
+/// A parsed HTTP/3 frame carried over a QUIC bidirectional stream.
+///
+/// This enum represents the subset of HTTP/3 frame types (RFC 9114) that
+/// Barqium needs to handle in its H3 framing layer. Variants map directly
+/// to the frame type identifiers in the spec.
+#[derive(Debug, Clone, PartialEq)]
+pub enum Http3Frame {
+    /// A DATA frame carrying request or response body bytes.
+    Data(Bytes),
+    /// A HEADERS frame carrying field section name–value pairs.
+    Headers(Vec<(String, String)>),
+    /// A SETTINGS frame exchanged at connection start on the control stream.
+    Settings,
+    /// A GOAWAY frame signalling the last accepted stream ID.
+    Goaway,
+}
+
 /// Returns the value of the `Alt-Svc` header for a given QUIC port.
 ///
 /// Clients that receive this header will know they can upgrade the next
