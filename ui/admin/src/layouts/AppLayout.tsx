@@ -115,6 +115,7 @@ export function AppLayout() {
           <button
             onClick={openPalette}
             title="Search (⌘K)"
+            aria-label="Open command palette (⌘K)"
             className="w-10 h-10 mx-auto flex items-center justify-center rounded-lg text-white/40 hover:text-white/70 hover:bg-white/8 transition-colors"
           >
             <Search size={15} />
@@ -137,6 +138,7 @@ export function AppLayout() {
                     to={to}
                     end={to === '/'}
                     title={collapsed ? label : undefined}
+                    aria-label={label}
                     className={({ isActive }) =>
                       cn(
                         'flex items-center gap-3 rounded-lg text-sm transition-colors',

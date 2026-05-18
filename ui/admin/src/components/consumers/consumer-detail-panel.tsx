@@ -54,7 +54,7 @@ export function ConsumerDetailPanel({ consumer, onClose }: ConsumerDetailPanelPr
                   </p>
                 </div>
               </div>
-              <button className="btn-icon btn-ghost" onClick={onClose}>
+              <button className="btn-icon btn-ghost" onClick={onClose} aria-label="Close panel">
                 <X size={16} />
               </button>
             </div>

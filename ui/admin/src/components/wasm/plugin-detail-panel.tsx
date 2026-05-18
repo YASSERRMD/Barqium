@@ -70,7 +70,7 @@ export function PluginDetailPanel({ plugin, onClose }: PluginDetailPanelProps) {
                   <PluginTriggerBadge trigger={plugin.trigger} />
                 </div>
               </div>
-              <button className="btn-icon btn-ghost" onClick={onClose}>
+              <button className="btn-icon btn-ghost" onClick={onClose} aria-label="Close panel">
                 <X size={16} />
               </button>
             </div>

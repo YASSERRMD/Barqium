@@ -77,7 +77,7 @@ export function AuditLogDetailPanel({ entry, onClose }: AuditLogDetailPanelProps
                 <EventTypeBadge eventType={entry.event_type} />
                 <p className="text-xs text-gray-500 mt-1">{entry.resource_type}</p>
               </div>
-              <button className="btn-icon btn-ghost" onClick={onClose}>
+              <button className="btn-icon btn-ghost" onClick={onClose} aria-label="Close panel">
                 <X size={16} />
               </button>
             </div>

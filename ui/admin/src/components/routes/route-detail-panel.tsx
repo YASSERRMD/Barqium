@@ -69,7 +69,7 @@ export function RouteDetailPanel({ route, onClose, upstreamName }: RouteDetailPa
                   {route.host && <p className="text-xs text-gray-500 mt-0.5">{route.host}</p>}
                 </div>
               </div>
-              <button className="btn-icon btn-ghost" onClick={onClose}>
+              <button className="btn-icon btn-ghost" onClick={onClose} aria-label="Close panel">
                 <X size={16} />
               </button>
             </div>

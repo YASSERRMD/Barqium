@@ -69,7 +69,7 @@ export function ProviderDetailPanel({ provider, onClose }: ProviderDetailPanelPr
                   <p className="text-xs text-gray-500 font-code mt-0.5">{provider.slug}</p>
                 </div>
               </div>
-              <button className="btn-icon btn-ghost" onClick={onClose}>
+              <button className="btn-icon btn-ghost" onClick={onClose} aria-label="Close panel">
                 <X size={16} />
               </button>
             </div>
