@@ -6,6 +6,100 @@ use dashmap::DashMap;
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
 
+/// A structured GraphQL request ready to be forwarded to an upstream endpoint.
+///
+/// This struct is produced by deserialising the inbound HTTP request body
+/// after [`detect`] has confirmed the request is GraphQL.
+#[derive(Debug, Clone)]
+pub struct GraphQlQuery {
+    /// The `operationName` field from the request body, if provided.
+    ///
+    /// Clients may omit this when the document contains a single operation.
+    pub operation_name: Option<String>,
+
+    /// The full GraphQL document string (query, mutation, or subscription).
+    pub query: String,
+
+    /// JSON-encoded variables object, if any.
+    ///
+    /// Stored as a raw [`serde_json::Value`] to preserve the original types
+    /// when forwarding to the upstream GraphQL server.
+    pub variables: Option<serde_json::Value>,
+}
+
+impl GraphQlQuery {
+    /// Create a minimal query with no operation name and no variables.
+    pub fn new(query: impl Into<String>) -> Self {
+        Self {
+            operation_name: None,
+            query: query.into(),
+            variables: None,
+        }
+    }
+}
+
+/// A complete GraphQL response returned to the client.
+///
+/// Follows the GraphQL over HTTP specification: both `data` and `errors`
+/// may be present simultaneously.
+#[derive(Debug, Clone)]
+pub struct GraphQlResponse {
+    /// The execution result produced by the upstream resolver, if any.
+    ///
+    /// Set to `serde_json::Value::Null` when the operation encountered a
+    /// non-null propagating error.
+    pub data: serde_json::Value,
+
+    /// List of errors returned by the upstream GraphQL server.
+    ///
+    /// An empty `Vec` means the operation succeeded without errors.
+    pub errors: Vec<GraphQlError>,
+}
+
+impl GraphQlResponse {
+    /// Create a successful response with no errors.
+    pub fn success(data: serde_json::Value) -> Self {
+        Self {
+            data,
+            errors: Vec::new(),
+        }
+    }
+
+    /// Return `true` if the response contains at least one error.
+    pub fn has_errors(&self) -> bool {
+        !self.errors.is_empty()
+    }
+}
+
+/// A single error entry in a GraphQL response.
+///
+/// Conforms to the `errors` array format defined in the GraphQL spec
+/// (section 7.1.2 — Response Format).
+#[derive(Debug, Clone)]
+pub struct GraphQlError {
+    /// Human-readable description of the error.
+    pub message: String,
+
+    /// JSON Pointer path to the field that caused the error, if applicable.
+    ///
+    /// Each element is either a string (field name) or integer (list index).
+    pub path: Vec<serde_json::Value>,
+
+    /// Arbitrary additional information provided by the upstream server.
+    pub extensions: Option<serde_json::Value>,
+}
+
+impl GraphQlError {
+    /// Create a simple error with just a message.
+    pub fn new(message: impl Into<String>) -> Self {
+        Self {
+            message: message.into(),
+            path: Vec::new(),
+            extensions: None,
+        }
+    }
+}
+
 /// Detected GraphQL operation type.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OperationType {
@@ -32,8 +126,13 @@ pub struct GraphQlInfo {
 /// body to determine the operation type.
 ///
 /// Recognised content types:
-///   - `application/graphql+json`
-///   - `application/json` with a `query` key (Apollo-style)
+///   - `application/graphql+json` (preferred, per the GraphQL-over-HTTP spec)
+///   - `application/json` with a `query` key (Apollo-style — widely used)
+///
+/// # Returns
+/// `Some(GraphQlInfo)` when a GraphQL request is detected with at least a
+/// `query` field or a persisted-query hash. Returns `None` for non-GraphQL
+/// requests, malformed JSON, or JSON bodies without a `query` key.
 pub fn detect(content_type: &str, body: &Bytes) -> Option<GraphQlInfo> {
     let ct = content_type.split(';').next().unwrap_or("").trim();
     if ct != "application/graphql+json" && ct != "application/json" {

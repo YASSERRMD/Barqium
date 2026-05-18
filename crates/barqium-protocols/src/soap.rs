@@ -7,6 +7,108 @@ pub enum SoapVersion {
     Soap12,
 }
 
+impl std::fmt::Display for SoapVersion {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Soap11 => write!(f, "SOAP/1.1"),
+            Self::Soap12 => write!(f, "SOAP/1.2"),
+        }
+    }
+}
+
+impl SoapVersion {
+    /// Return the canonical namespace URI for this SOAP version.
+    pub fn namespace_uri(&self) -> &'static str {
+        match self {
+            Self::Soap11 => "http://schemas.xmlsoap.org/soap/envelope/",
+            Self::Soap12 => "http://www.w3.org/2003/05/soap-envelope",
+        }
+    }
+
+    /// Return the MIME type used in `Content-Type` for this SOAP version.
+    pub fn content_type(&self) -> &'static str {
+        match self {
+            Self::Soap11 => "text/xml; charset=utf-8",
+            Self::Soap12 => "application/soap+xml; charset=utf-8",
+        }
+    }
+}
+
+/// A parsed SOAP envelope comprising a header section and a body section.
+///
+/// Both sections are stored as raw XML strings so the gateway can relay
+/// them to the upstream SOAP service without re-serialising. The header
+/// may be absent for SOAP messages that carry no `<Header>` element.
+#[derive(Debug, Clone)]
+pub struct SoapEnvelope {
+    /// Raw XML content of the `<soap:Header>` element, if present.
+    ///
+    /// Does not include the surrounding `<soap:Header>` tags.
+    pub header: Option<String>,
+
+    /// Raw XML content of the `<soap:Body>` element.
+    ///
+    /// Does not include the surrounding `<soap:Body>` tags.
+    pub body: String,
+}
+
+impl SoapEnvelope {
+    /// Create an envelope with only a body and no header.
+    pub fn new(body: impl Into<String>) -> Self {
+        Self {
+            header: None,
+            body: body.into(),
+        }
+    }
+
+    /// Attach a header fragment to this envelope.
+    pub fn with_header(mut self, header: impl Into<String>) -> Self {
+        self.header = Some(header.into());
+        self
+    }
+}
+
+/// A structured SOAP fault returned in the body of an error response.
+///
+/// Maps to the `<soap:Fault>` element defined in both SOAP 1.1 and SOAP 1.2.
+/// For SOAP 1.2 the `faultactor` becomes the `Node` or `Role` sub-element.
+#[derive(Debug, Clone)]
+pub struct SoapFault {
+    /// The fault code identifying the category of error.
+    ///
+    /// SOAP 1.1 examples: `soap:Server`, `soap:Client`.
+    /// SOAP 1.2 examples: `env:Receiver`, `env:Sender`.
+    pub faultcode: String,
+
+    /// A human-readable explanation of the fault.
+    pub faultstring: String,
+
+    /// URI identifying the endpoint where the fault occurred, if known.
+    ///
+    /// Optional in both SOAP versions.
+    pub faultactor: Option<String>,
+}
+
+impl SoapFault {
+    /// Create a server-side fault with the given message.
+    pub fn server_error(message: impl Into<String>) -> Self {
+        Self {
+            faultcode: "soap:Server".into(),
+            faultstring: message.into(),
+            faultactor: None,
+        }
+    }
+
+    /// Create a client-side fault with the given message.
+    pub fn client_error(message: impl Into<String>) -> Self {
+        Self {
+            faultcode: "soap:Client".into(),
+            faultstring: message.into(),
+            faultactor: None,
+        }
+    }
+}
+
 /// Information extracted from a SOAP request.
 #[derive(Debug, Clone)]
 pub struct SoapAction {
