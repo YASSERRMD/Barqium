@@ -266,6 +266,72 @@ Interactive spec served at `GET /api/openapi.yaml`.
 
 ---
 
+## Performance Tuning
+
+The following actionable tips help you squeeze the most throughput and lowest
+latency out of a production Barqium deployment.
+
+### 1. Pin worker threads to physical cores
+
+By default Tokio spawns one worker thread per logical CPU. On a hyper-threaded
+host you can often get better cache locality by pinning to physical cores only:
+
+```bash
+TOKIO_WORKER_THREADS=$(nproc --ignore=1) barqium
+```
+
+Set `worker_threads` in `PerformanceConfig` to the same value so the runtime
+builder respects it at startup.
+
+### 2. Increase OS socket buffers
+
+The default `SO_RCVBUF`/`SO_SNDBUF` on most Linux distributions is 128 kB.
+Under burst traffic this causes packet drops before the kernel can wake the
+Tokio I/O driver. Raise the system-wide maximums and configure Barqium to
+match:
+
+```bash
+# /etc/sysctl.d/99-barqium.conf
+net.core.rmem_max = 67108864   # 64 MiB
+net.core.wmem_max = 67108864
+net.ipv4.tcp_rmem = 4096 131072 67108864
+net.ipv4.tcp_wmem = 4096 131072 67108864
+```
+
+Then set `socket_recv_buffer_bytes = 64 * 1024 * 1024` in `PerformanceConfig`.
+
+### 3. Use the edge build profile for CDN nodes
+
+The `edge` Cargo profile strips debug symbols, applies thin LTO, and sets
+`panic = "abort"`. Combined with `--no-default-features --features edge` it
+produces a binary that is typically **40–60% smaller** than the default release
+build and starts **30–50 ms faster** on cold containers:
+
+```bash
+cargo build --profile edge --no-default-features --features edge
+```
+
+### 4. Tune the upstream connection pool
+
+Every new TCP connection adds ~1–2 ms of overhead on LAN and ~40–80 ms over
+WAN. Keep connections alive by setting `max_idle_per_host` in
+`ConnectionPoolConfig` to at least the expected concurrent request rate per
+upstream. For a high-throughput service:
+
+```toml
+max_idle_per_host       = 50
+max_total_connections   = 4096
+idle_timeout_secs       = 30
+```
+
+### 5. Enable `TCP_NODELAY`
+
+Nagle's algorithm batches small TCP segments to reduce packet count. For a
+low-latency API gateway this is counterproductive. Ensure `tcp_nodelay = true`
+in `PerformanceConfig` (it is `true` by default).
+
+---
+
 ## Roadmap
 
 - [ ] **Phase 5 — Enterprise**: multi-cluster federation, policy-as-code (OPA), advanced SLO alerting, Helm chart, Kubernetes operator

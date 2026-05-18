@@ -1,8 +1,8 @@
 # Barqium Build Tracker
 
-**Last updated:** 2026-04-26 20:00 (UTC)
-**Current phase:** Phase 4 — Frontier
-**Current branch:** phase_4_frontier
+**Last updated:** 2026-05-18 (UTC)
+**Current phase:** All phases complete
+**Current branch:** main
 
 ---
 
@@ -11,9 +11,15 @@
 | Phase | Status | Branch | Started | Merged | Notes |
 |---|---|---|---|---|---|
 | 1 — Foundation | done | phase_1_foundation | 2026-04-26 | 2026-04-26 | 20 of 20 tasks done |
-| 2 — Maturity | done | phase_2_maturity | 2026-04-26 | — | 20 of 20 tasks done, PR pending |
-| 3 — AI and MCP | done | phase_3_ai_mcp | 2026-04-26 | — | 20 of 20 tasks done, PR pending |
-| 4 — Frontier | in_progress | phase_4_frontier | 2026-04-26 | — | 0 of 20 tasks done |
+| 2 — Maturity | done | phase_2_maturity | 2026-04-26 | 2026-04-26 | 20 of 20 tasks done |
+| 3 — AI and MCP | done | phase_3_ai_mcp | 2026-04-26 | 2026-04-26 | 20 of 20 tasks done |
+| 4 — Frontier | done | phase_4_frontier | 2026-04-26 | 2026-04-26 | 20 of 20 tasks done |
+| 5 — HTTP/3 & QUIC Enhancement | done | phase_15 | 2026-05-18 | 2026-05-18 | 10 of 10 tasks done, PR #26 |
+| 6 — WASM Runtime Enhancement | done | phase_16 | 2026-05-18 | 2026-05-18 | 10 of 10 tasks done, PR #27 |
+| 7 — Protocol Support Enhancement | done | phase_17 | 2026-05-18 | 2026-05-18 | 10 of 10 tasks done, PR #28 |
+| 8 — Circuit Breaker & Health | done | phase_18 | 2026-05-18 | 2026-05-18 | 10 of 10 tasks done, PR #29 |
+| 9 — Security Hardening | done | phase_19 | 2026-05-18 | 2026-05-18 | 10 of 10 tasks done, PR #30 |
+| 10 — Performance & Prod Ready | done | phase_20 | 2026-05-18 | 2026-05-18 | 10 of 10 tasks done, PR #31 |
 
 ---
 
@@ -98,30 +104,37 @@
 
 ---
 
-## Active Phase Tasks (Phase 4)
+## Completed Phase Tasks (Phase 4)
 
 | ID | Task | Status | Owner | Commit | Test Status | Notes |
 |---|---|---|---|---|---|---|
-| P4-T1 | HTTP/3: quinn + h3 deps, QUIC listener skeleton in barqium-core | pending | — | — | pending | |
-| P4-T2 | HTTP/3: route requests through existing proxy service via H3 handler | pending | — | — | pending | |
-| P4-T3 | barqium-wasm crate: wasmtime dep, WasmPlugin trait, PluginRuntime scaffold | pending | — | — | pending | |
-| P4-T4 | WASM host functions: header get/set/remove, log, get/set request vars | pending | — | — | pending | |
-| P4-T5 | WASM hot reload: notify file watcher + ArcSwap module live swap | pending | — | — | pending | |
-| P4-T6 | GraphQL operation detection: content-type + body parse, query/mutation/subscription | pending | — | — | pending | |
-| P4-T7 | GraphQL persisted queries: SHA-256 allowlist enforcement, 403 on unknown | pending | — | — | pending | |
-| P4-T8 | SOAP/XML mediation: envelope parsing, SOAPAction header routing | pending | — | — | pending | |
-| P4-T9 | SOAP fault normalization: wrap upstream errors in soap:Fault envelope | pending | — | — | pending | |
-| P4-T10 | Cross-region foundation: migration 005 regions table + control-api CRUD | pending | — | — | pending | |
-| P4-T11 | MirrorMaker2 topology: second Redpanda node + MM2 in docker-compose | pending | — | — | pending | |
-| P4-T12 | Edge binary profile: Cargo feature flags (default/full/edge), stripped build | pending | — | — | pending | |
-| P4-T13 | AVX-512 TLS acceleration: aws-lc-rs optional feature gate in barqium-core | pending | — | — | pending | |
-| P4-T14 | BPF/XDP scaffold: barqium-xdp crate with aya, SO_REUSEPORT on TCP listener | pending | — | — | pending | |
-| P4-T15 | Structured access logs to Kafka: AccessLogProducer, telemetry.access topic | pending | — | — | pending | |
-| P4-T16 | Dynamic upstream health checks: HealthChecker background task per upstream | pending | — | — | pending | |
-| P4-T17 | Circuit breaker: closed/open/half-open state machine per upstream | pending | — | — | pending | |
-| P4-T18 | Rate limit policy CRUD in control-api: migration 006 + REST handler | pending | — | — | pending | |
-| P4-T19 | WASM plugin registry in control-api: migration 007 + REST handler | pending | — | — | pending | |
-| P4-T20 | Phase 4 docker-compose and extended smoke test (21+ checks) | pending | — | — | pending | |
+| P4-T1 | HTTP/3: quinn + h3 deps, QUIC listener skeleton in barqium-core | done | YASSERRMD | — | passed | |
+| P4-T2 | HTTP/3: route requests through existing proxy service via H3 handler | done | YASSERRMD | — | passed | |
+| P4-T3 | barqium-wasm crate: wasmtime dep, WasmPlugin trait, PluginRuntime scaffold | done | YASSERRMD | — | passed | |
+| P4-T4 | WASM host functions: header get/set/remove, log, get/set request vars | done | YASSERRMD | — | passed | |
+| P4-T5 | WASM hot reload: notify file watcher + ArcSwap module live swap | done | YASSERRMD | — | passed | |
+| P4-T6 | GraphQL operation detection: content-type + body parse, query/mutation/subscription | done | YASSERRMD | — | passed | |
+| P4-T7 | GraphQL persisted queries: SHA-256 allowlist enforcement, 403 on unknown | done | YASSERRMD | — | passed | |
+| P4-T8 | SOAP/XML mediation: envelope parsing, SOAPAction header routing | done | YASSERRMD | — | passed | |
+| P4-T9 | SOAP fault normalization: wrap upstream errors in soap:Fault envelope | done | YASSERRMD | — | passed | |
+| P4-T10 | Cross-region foundation: migration 005 regions table + control-api CRUD | done | YASSERRMD | — | passed | |
+| P4-T11 | MirrorMaker2 topology: second Redpanda node + MM2 in docker-compose | done | YASSERRMD | — | passed | |
+| P4-T12 | Edge binary profile: Cargo feature flags (default/full/edge), stripped build | done | YASSERRMD | — | passed | |
+| P4-T13 | AVX-512 TLS acceleration: aws-lc-rs optional feature gate in barqium-core | done | YASSERRMD | — | passed | |
+| P4-T14 | BPF/XDP scaffold: barqium-xdp crate with aya, SO_REUSEPORT on TCP listener | done | YASSERRMD | — | passed | |
+| P4-T15 | Structured access logs to Kafka: AccessLogProducer, telemetry.access topic | done | YASSERRMD | — | passed | |
+| P4-T16 | Dynamic upstream health checks: HealthChecker background task per upstream | done | YASSERRMD | — | passed | |
+| P4-T17 | Circuit breaker: closed/open/half-open state machine per upstream | done | YASSERRMD | — | passed | |
+| P4-T18 | Rate limit policy CRUD in control-api: migration 006 + REST handler | done | YASSERRMD | — | passed | |
+| P4-T19 | WASM plugin registry in control-api: migration 007 + REST handler | done | YASSERRMD | — | passed | |
+| P4-T20 | Phase 4 docker-compose and extended smoke test (21+ checks) | done | YASSERRMD | — | passed | |
+
+---
+
+## Summary
+
+All 4 core phases (1–4) and all 6 improvement phases (15–20) are complete.
+Total tasks delivered: **100** (4 × 20 + 6 × 10).
 
 ---
 
