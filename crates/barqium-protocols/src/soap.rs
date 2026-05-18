@@ -7,6 +7,40 @@ pub enum SoapVersion {
     Soap12,
 }
 
+/// A parsed SOAP envelope comprising a header section and a body section.
+///
+/// Both sections are stored as raw XML strings so the gateway can relay
+/// them to the upstream SOAP service without re-serialising. The header
+/// may be absent for SOAP messages that carry no `<Header>` element.
+#[derive(Debug, Clone)]
+pub struct SoapEnvelope {
+    /// Raw XML content of the `<soap:Header>` element, if present.
+    ///
+    /// Does not include the surrounding `<soap:Header>` tags.
+    pub header: Option<String>,
+
+    /// Raw XML content of the `<soap:Body>` element.
+    ///
+    /// Does not include the surrounding `<soap:Body>` tags.
+    pub body: String,
+}
+
+impl SoapEnvelope {
+    /// Create an envelope with only a body and no header.
+    pub fn new(body: impl Into<String>) -> Self {
+        Self {
+            header: None,
+            body: body.into(),
+        }
+    }
+
+    /// Attach a header fragment to this envelope.
+    pub fn with_header(mut self, header: impl Into<String>) -> Self {
+        self.header = Some(header.into());
+        self
+    }
+}
+
 /// Information extracted from a SOAP request.
 #[derive(Debug, Clone)]
 pub struct SoapAction {
