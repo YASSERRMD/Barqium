@@ -15,7 +15,10 @@ pub mod tls;
 pub mod upstream_health;
 pub mod websocket;
 
-pub use circuit_breaker::{CircuitBreakerRegistry, CircuitState};
+pub use circuit_breaker::{
+    CircuitBreakerConfig, CircuitBreakerEvent, CircuitBreakerMetrics, CircuitBreakerRegistry,
+    CircuitState,
+};
 pub use config::DataPlaneConfig;
 pub use error::ProxyError;
 pub use quic::{
@@ -24,4 +27,7 @@ pub use quic::{
 };
 pub use service::ProxyService;
 pub use snapshot::{RouteMatch, SnapshotReader};
-pub use upstream_health::{HealthChecker, UpstreamHealth};
+pub use upstream_health::{
+    HealthCheckConfig, HealthCheckMetrics, HealthCheckResult, HealthChecker, UpstreamHealth,
+    UpstreamStatus,
+};
