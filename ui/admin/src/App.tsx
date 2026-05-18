@@ -9,6 +9,7 @@ import { TenantsPage } from './pages/TenantsPage'
 import { UpstreamsPage } from './pages/UpstreamsPage'
 import { RoutesPage } from './pages/RoutesPage'
 import { MetricsPage } from './pages/MetricsPage'
+import { AIProvidersPage } from './pages/AIProvidersPage'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -78,7 +79,7 @@ export function App() {
                   <Route path="routes"       element={<RoutesPage />} />
                   <Route path="metrics"      element={<MetricsPage />} />
                   <Route path="consumers"    element={<StubPage name="Consumers" />} />
-                  <Route path="ai-providers" element={<StubPage name="AI Providers" />} />
+                  <Route path="ai-providers" element={<AIProvidersPage />} />
                   <Route path="rate-limits"  element={<StubPage name="Rate Limits" />} />
                   <Route path="wasm-plugins" element={<StubPage name="WASM Plugins" />} />
                   <Route path="audit"        element={<StubPage name="Audit Log" />} />
