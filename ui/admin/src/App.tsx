@@ -15,6 +15,7 @@ import { WasmPluginsPage } from './pages/WasmPluginsPage'
 import { ConsumersPage } from './pages/ConsumersPage'
 import { AuditLogPage } from './pages/AuditLogPage'
 import { RegionsPage } from './pages/RegionsPage'
+import { CheckpointsPage } from './pages/CheckpointsPage'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -88,7 +89,7 @@ export function App() {
                   <Route path="rate-limits"  element={<RateLimitsPage />} />
                   <Route path="wasm-plugins" element={<WasmPluginsPage />} />
                   <Route path="audit"        element={<AuditLogPage />} />
-                  <Route path="checkpoints"  element={<StubPage name="Checkpoints" />} />
+                  <Route path="checkpoints"  element={<CheckpointsPage />} />
                   <Route path="regions"      element={<RegionsPage />} />
                   <Route path="policies"     element={<StubPage name="Policies" />} />
                 </Route>
