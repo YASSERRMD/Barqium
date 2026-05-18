@@ -1,23 +1,145 @@
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use dashmap::DashMap;
 use tracing::{info, warn};
 
+/// Aggregate metrics for all circuit breakers in the registry.
+///
+/// Counters use relaxed atomics — they are read by monitoring/metrics
+/// exporters and do not participate in any synchronisation protocol.
+#[derive(Debug, Default)]
+pub struct CircuitBreakerMetrics {
+    /// Total number of calls (allowed or rejected) across all breakers.
+    pub total_calls: AtomicU64,
+    /// Number of calls that completed successfully.
+    pub successful_calls: AtomicU64,
+    /// Number of calls that were recorded as failures.
+    pub failed_calls: AtomicU64,
+    /// Number of state transitions (Closed→Open, Open→HalfOpen, HalfOpen→Closed).
+    pub state_transitions: AtomicU64,
+}
+
+impl CircuitBreakerMetrics {
+    /// Create a new zeroed metrics instance.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Increment the successful-calls counter.
+    pub fn on_success(&self) {
+        self.total_calls.fetch_add(1, Ordering::Relaxed);
+        self.successful_calls.fetch_add(1, Ordering::Relaxed);
+    }
+
+    /// Increment the failed-calls counter.
+    pub fn on_failure(&self) {
+        self.total_calls.fetch_add(1, Ordering::Relaxed);
+        self.failed_calls.fetch_add(1, Ordering::Relaxed);
+    }
+
+    /// Increment the state-transitions counter.
+    pub fn on_transition(&self) {
+        self.state_transitions.fetch_add(1, Ordering::Relaxed);
+    }
+}
+
+/// An event emitted by the circuit breaker when its state changes or a
+/// call is completed.
+///
+/// Subscribe to these events to feed circuit breaker activity into an
+/// event bus or structured audit log.
+#[derive(Debug, Clone)]
+pub enum CircuitBreakerEvent {
+    /// The circuit transitioned from Closed or HalfOpen to Open.
+    Opened(Instant),
+    /// The circuit transitioned from Open or HalfOpen back to Closed.
+    Closed(Instant),
+    /// The circuit transitioned from Open to HalfOpen (recovery probe).
+    HalfOpened(Instant),
+    /// A call through the circuit completed successfully.
+    CallSucceeded,
+    /// A call through the circuit failed.
+    CallFailed,
+}
+
+/// Configuration parameters for a circuit breaker instance.
+///
+/// Passed to [`CircuitBreakerRegistry::new`] (or a future per-upstream
+/// constructor) to tune the failure detection and recovery behaviour.
+#[derive(Debug, Clone)]
+pub struct CircuitBreakerConfig {
+    /// Number of consecutive failures required to open the circuit.
+    ///
+    /// A lower value reacts faster to outages but may cause false positives
+    /// under transient errors. Defaults to `5`.
+    pub failure_threshold: u32,
+
+    /// Seconds the circuit remains open before transitioning to half-open.
+    ///
+    /// During this window all requests are rejected immediately. Defaults
+    /// to `30` seconds.
+    pub recovery_timeout_secs: u64,
+
+    /// Maximum number of probe requests allowed in the half-open state.
+    ///
+    /// Once this many requests succeed the circuit closes; any failure
+    /// re-opens it. Defaults to `1`.
+    pub half_open_max_calls: u32,
+}
+
+impl Default for CircuitBreakerConfig {
+    fn default() -> Self {
+        Self {
+            failure_threshold: 5,
+            recovery_timeout_secs: 30,
+            half_open_max_calls: 1,
+        }
+    }
+}
+
+/// The observable state of a single circuit breaker.
+///
+/// State transitions follow the standard three-state model:
+/// ```text
+/// Closed --[failure_threshold exceeded]--> Open
+/// Open   --[reset_timeout elapsed]-------> HalfOpen
+/// HalfOpen --[success]-------------------> Closed
+/// HalfOpen --[failure]-------------------> Open
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CircuitState {
+    /// Normal operation; requests are forwarded to the upstream.
     Closed,
+    /// The upstream is considered unavailable; all requests are rejected.
     Open,
+    /// A single probe request is allowed through to test recovery.
     HalfOpen,
 }
 
+impl std::fmt::Display for CircuitState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Closed => write!(f, "closed"),
+            Self::Open => write!(f, "open"),
+            Self::HalfOpen => write!(f, "half-open"),
+        }
+    }
+}
+
+/// Internal mutable state for a single upstream breaker.
 struct BreakerState {
+    /// Current state of the circuit.
     state: CircuitState,
+    /// Number of consecutive failures since the last success.
     consecutive_failures: u32,
+    /// The instant at which the breaker last transitioned to `Open`.
     opened_at: Option<Instant>,
 }
 
 impl BreakerState {
+    /// Initialise a breaker in the `Closed` state.
     fn new() -> Self {
         Self {
             state: CircuitState::Closed,
@@ -42,6 +164,11 @@ pub struct CircuitBreakerRegistry {
 }
 
 impl CircuitBreakerRegistry {
+    /// Create a new registry shared via `Arc`.
+    ///
+    /// # Parameters
+    /// * `failure_threshold` – number of consecutive failures before the breaker opens.
+    /// * `reset_timeout` – how long to wait in the `Open` state before probing recovery.
     #[must_use]
     pub fn new(failure_threshold: u32, reset_timeout: Duration) -> Arc<Self> {
         Arc::new(Self {
