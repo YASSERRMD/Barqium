@@ -58,6 +58,16 @@ pub enum CircuitState {
     HalfOpen,
 }
 
+impl std::fmt::Display for CircuitState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Closed => write!(f, "closed"),
+            Self::Open => write!(f, "open"),
+            Self::HalfOpen => write!(f, "half-open"),
+        }
+    }
+}
+
 /// Internal mutable state for a single upstream breaker.
 struct BreakerState {
     /// Current state of the circuit.
