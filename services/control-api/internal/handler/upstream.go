@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -14,6 +15,64 @@ import (
 
 	"github.com/yasserrmd/barqium/services/control-api/internal/sqlc/sqlcgen"
 )
+// Note: "net/url" and "strings" are used by validateURL above.
+
+// blockedHosts is the list of host patterns that must not be used as upstream
+// URLs. This prevents SSRF attacks that target the gateway's own host or
+// other services on the internal network.
+var blockedHosts = []string{
+	"localhost",
+	"127.",
+	"::1",
+	"10.",
+	"172.16.",
+	"172.17.",
+	"172.18.",
+	"172.19.",
+	"172.20.",
+	"172.21.",
+	"172.22.",
+	"172.23.",
+	"172.24.",
+	"172.25.",
+	"172.26.",
+	"172.27.",
+	"172.28.",
+	"172.29.",
+	"172.30.",
+	"172.31.",
+	"192.168.",
+	"169.254.",
+	"0.0.0.0",
+}
+
+// validateURL checks that rawURL is a valid HTTP or HTTPS URL and does not
+// point to a localhost or RFC-1918 private address (SSRF prevention).
+// On failure it writes the 422 error and returns false.
+func validateURL(w http.ResponseWriter, rawURL string) bool {
+	if rawURL == "" {
+		writeError(w, http.StatusUnprocessableEntity, "url is required")
+		return false
+	}
+	parsed, err := url.ParseRequestURI(rawURL)
+	if err != nil {
+		writeError(w, http.StatusUnprocessableEntity, "url must be a valid URL")
+		return false
+	}
+	scheme := strings.ToLower(parsed.Scheme)
+	if scheme != "http" && scheme != "https" {
+		writeError(w, http.StatusUnprocessableEntity, "url scheme must be http or https")
+		return false
+	}
+	host := strings.ToLower(parsed.Hostname())
+	for _, blocked := range blockedHosts {
+		if strings.HasPrefix(host, blocked) || host == strings.TrimSuffix(blocked, ".") {
+			writeError(w, http.StatusUnprocessableEntity, "url must not reference localhost or internal IP addresses")
+			return false
+		}
+	}
+	return true
+}
 
 // Upstreams mounts all upstream routes under a tenant-scoped router.
 // Caller must ensure {tenantId} is available in the route context.
@@ -48,8 +107,7 @@ func createUpstream(q *sqlcgen.Queries) http.HandlerFunc {
 			writeError(w, http.StatusUnprocessableEntity, "name is required")
 			return
 		}
-		if _, err := url.ParseRequestURI(req.URL); err != nil || req.URL == "" {
-			writeError(w, http.StatusUnprocessableEntity, "url must be a valid URL")
+		if !validateURL(w, req.URL) {
 			return
 		}
 
@@ -175,8 +233,7 @@ func updateUpstream(q *sqlcgen.Queries) http.HandlerFunc {
 		}
 		rawURL := existing.Url
 		if req.URL != "" {
-			if _, err := url.ParseRequestURI(req.URL); err != nil {
-				writeError(w, http.StatusUnprocessableEntity, "url must be a valid URL")
+			if !validateURL(w, req.URL) {
 				return
 			}
 			rawURL = req.URL
