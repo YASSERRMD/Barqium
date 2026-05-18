@@ -1,3 +1,4 @@
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 
@@ -80,6 +81,44 @@ impl HealthCheckResult {
             latency_ms,
             checked_at: SystemTime::now(),
         }
+    }
+}
+
+/// Aggregate health-check metrics for all upstreams.
+///
+/// Counters are updated by [`HealthChecker`] after each probe cycle.
+/// The `last_success_at` field records the most recent successful probe
+/// across all upstreams.
+#[derive(Debug, Default)]
+pub struct HealthCheckMetrics {
+    /// Total number of probes sent since startup.
+    pub total_checks: AtomicU64,
+    /// Total number of probes that resulted in an unhealthy verdict.
+    pub total_failures: AtomicU64,
+    /// Unix timestamp (seconds) of the most recent successful probe.
+    pub last_success_at: AtomicU64,
+}
+
+impl HealthCheckMetrics {
+    /// Create a new zeroed metrics instance.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Record a successful probe result.
+    pub fn on_success(&self) {
+        self.total_checks.fetch_add(1, Ordering::Relaxed);
+        let now = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs();
+        self.last_success_at.store(now, Ordering::Relaxed);
+    }
+
+    /// Record a failed probe result.
+    pub fn on_failure(&self) {
+        self.total_checks.fetch_add(1, Ordering::Relaxed);
+        self.total_failures.fetch_add(1, Ordering::Relaxed);
     }
 }
 
