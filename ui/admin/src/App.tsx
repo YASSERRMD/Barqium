@@ -1,6 +1,8 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { ThemeProvider } from '@/components/ui/theme-provider'
+import { ToastProvider } from '@/components/ui/toast'
 import { AppLayout } from './layouts/AppLayout'
 import { DashboardPage } from './pages/Dashboard'
 import { TenantsPage } from './pages/TenantsPage'
@@ -10,16 +12,11 @@ import { MetricsPage } from './pages/MetricsPage'
 
 const queryClient = new QueryClient({
   defaultOptions: {
-    queries: {
-      staleTime: 30_000,
-      retry: 1,
-    },
+    queries: { staleTime: 30_000, retry: 1 },
   },
 })
 
-interface ErrorBoundaryState {
-  error: Error | null
-}
+interface ErrorBoundaryState { error: Error | null }
 
 class AppErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryState> {
   state: ErrorBoundaryState = { error: null }
@@ -35,12 +32,15 @@ class AppErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryS
   render() {
     if (this.state.error) {
       return (
-        <div className="min-h-screen flex items-center justify-center p-8">
+        <div className="min-h-screen flex items-center justify-center p-8 bg-gray-50 dark:bg-gray-950">
           <div className="max-w-md text-center">
-            <h1 className="text-xl font-bold text-navy mb-2">Something went wrong</h1>
-            <p className="text-sm text-gray-500 mb-4">{this.state.error.message}</p>
+            <div className="w-12 h-12 rounded-xl bg-red-100 dark:bg-red-900 flex items-center justify-center mx-auto mb-4">
+              <span className="text-red-500 text-xl">!</span>
+            </div>
+            <h1 className="text-lg font-bold text-navy dark:text-white mb-2">Something went wrong</h1>
+            <p className="text-sm text-gray-500 mb-5 font-code">{this.state.error.message}</p>
             <button
-              className="text-sm text-navy underline"
+              className="btn-primary"
               onClick={() => this.setState({ error: null })}
             >
               Try again
@@ -53,22 +53,44 @@ class AppErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryS
   }
 }
 
+/* Stub pages for routes not yet implemented */
+function StubPage({ name }: { name: string }) {
+  return (
+    <div className="p-8">
+      <h1 className="page-title">{name}</h1>
+      <p className="page-sub mt-2">This page is coming in a future phase.</p>
+    </div>
+  )
+}
+
 export function App() {
   return (
-    <AppErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
-          <Routes>
-            <Route element={<AppLayout />}>
-              <Route index element={<DashboardPage />} />
-              <Route path="tenants" element={<TenantsPage />} />
-              <Route path="upstreams" element={<UpstreamsPage />} />
-              <Route path="routes" element={<RoutesPage />} />
-              <Route path="metrics" element={<MetricsPage />} />
-            </Route>
-          </Routes>
-        </BrowserRouter>
-      </QueryClientProvider>
-    </AppErrorBoundary>
+    <ThemeProvider>
+      <ToastProvider>
+        <AppErrorBoundary>
+          <QueryClientProvider client={queryClient}>
+            <BrowserRouter>
+              <Routes>
+                <Route element={<AppLayout />}>
+                  <Route index element={<DashboardPage />} />
+                  <Route path="tenants"      element={<TenantsPage />} />
+                  <Route path="upstreams"    element={<UpstreamsPage />} />
+                  <Route path="routes"       element={<RoutesPage />} />
+                  <Route path="metrics"      element={<MetricsPage />} />
+                  <Route path="consumers"    element={<StubPage name="Consumers" />} />
+                  <Route path="ai-providers" element={<StubPage name="AI Providers" />} />
+                  <Route path="rate-limits"  element={<StubPage name="Rate Limits" />} />
+                  <Route path="wasm-plugins" element={<StubPage name="WASM Plugins" />} />
+                  <Route path="audit"        element={<StubPage name="Audit Log" />} />
+                  <Route path="checkpoints"  element={<StubPage name="Checkpoints" />} />
+                  <Route path="regions"      element={<StubPage name="Regions" />} />
+                  <Route path="policies"     element={<StubPage name="Policies" />} />
+                </Route>
+              </Routes>
+            </BrowserRouter>
+          </QueryClientProvider>
+        </AppErrorBoundary>
+      </ToastProvider>
+    </ThemeProvider>
   )
 }
