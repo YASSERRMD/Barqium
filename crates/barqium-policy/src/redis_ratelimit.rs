@@ -59,7 +59,7 @@ impl RedisRateLimiter {
             .await?;
 
         if count > self.config.max_requests {
-            return Err(PolicyError::RateLimitExceeded);
+            return Err(PolicyError::RateLimitExceeded { retry_after_secs: self.config.window_secs });
         }
         Ok(())
     }
@@ -98,7 +98,7 @@ return count
             .arg(ttl)
             .invoke_async(&mut conn)
             .await
-            .map_err(|_e| PolicyError::RateLimitExceeded)?;
+            .map_err(|_e| PolicyError::RateLimitExceeded { retry_after_secs: self.config.window_secs })?;
 
         Ok(count)
     }

@@ -18,6 +18,14 @@ pub enum PolicyError {
     #[error("API key not found")]
     ApiKeyNotFound,
 
-    #[error("rate limit exceeded")]
-    RateLimitExceeded,
+    /// The client has been rate-limited.
+    ///
+    /// The `retry_after_secs` field carries the number of seconds the client
+    /// should wait before retrying, suitable for setting the `Retry-After`
+    /// HTTP response header.
+    #[error("rate limit exceeded; retry after {retry_after_secs}s")]
+    RateLimitExceeded {
+        /// Suggested wait time in seconds before the client may retry.
+        retry_after_secs: u64,
+    },
 }
