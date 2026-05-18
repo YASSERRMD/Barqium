@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
+import { CommandPalette } from '@/components/command-palette/command-palette'
+import { useCommandPalette } from '@/components/command-palette/use-command-palette'
 import {
   LayoutDashboard, Network, Route, Building2, Activity,
   Brain, Shield, Puzzle, Users, ClipboardList,
   Globe, GitBranch, ChevronLeft, Sun, Moon, Monitor,
-  Zap,
+  Zap, Search,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/components/ui/theme-provider'
@@ -54,6 +56,7 @@ const themeOptions: Array<{ value: 'light' | 'dark' | 'system'; icon: React.Elem
 export function AppLayout() {
   const [collapsed, setCollapsed] = useState(false)
   const { theme, setTheme } = useTheme()
+  const { open: paletteOpen, openPalette, closePalette } = useCommandPalette()
 
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-950 overflow-hidden font-body">
@@ -77,6 +80,26 @@ export function AppLayout() {
           )}
           {collapsed && <span className="font-heading text-lg font-bold text-gold">B</span>}
         </div>
+
+        {/* Search / Command Palette button */}
+        {!collapsed ? (
+          <button
+            onClick={openPalette}
+            className="mx-3 mb-2 flex items-center gap-2 rounded-lg px-3 py-2 text-xs text-white/40 bg-white/5 hover:bg-white/10 hover:text-white/70 transition-colors w-[calc(100%-1.5rem)]"
+          >
+            <Search size={13} className="flex-shrink-0" />
+            <span className="flex-1 text-left">Search…</span>
+            <kbd className="text-[9px] rounded border border-white/20 px-1 py-0.5 font-code">⌘K</kbd>
+          </button>
+        ) : (
+          <button
+            onClick={openPalette}
+            title="Search (⌘K)"
+            className="w-10 h-10 mx-auto flex items-center justify-center rounded-lg text-white/40 hover:text-white/70 hover:bg-white/8 transition-colors"
+          >
+            <Search size={15} />
+          </button>
+        )}
 
         {/* Nav */}
         <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-4">
@@ -172,6 +195,9 @@ export function AppLayout() {
       <main className="flex-1 overflow-auto">
         <Outlet />
       </main>
+
+      {/* Command Palette (rendered at root level) */}
+      <CommandPalette open={paletteOpen} onClose={closePalette} />
     </div>
   )
 }
