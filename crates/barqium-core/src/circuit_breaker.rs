@@ -4,20 +4,37 @@ use std::time::{Duration, Instant};
 use dashmap::DashMap;
 use tracing::{info, warn};
 
+/// The observable state of a single circuit breaker.
+///
+/// State transitions follow the standard three-state model:
+/// ```text
+/// Closed --[failure_threshold exceeded]--> Open
+/// Open   --[reset_timeout elapsed]-------> HalfOpen
+/// HalfOpen --[success]-------------------> Closed
+/// HalfOpen --[failure]-------------------> Open
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CircuitState {
+    /// Normal operation; requests are forwarded to the upstream.
     Closed,
+    /// The upstream is considered unavailable; all requests are rejected.
     Open,
+    /// A single probe request is allowed through to test recovery.
     HalfOpen,
 }
 
+/// Internal mutable state for a single upstream breaker.
 struct BreakerState {
+    /// Current state of the circuit.
     state: CircuitState,
+    /// Number of consecutive failures since the last success.
     consecutive_failures: u32,
+    /// The instant at which the breaker last transitioned to `Open`.
     opened_at: Option<Instant>,
 }
 
 impl BreakerState {
+    /// Initialise a breaker in the `Closed` state.
     fn new() -> Self {
         Self {
             state: CircuitState::Closed,
@@ -42,6 +59,11 @@ pub struct CircuitBreakerRegistry {
 }
 
 impl CircuitBreakerRegistry {
+    /// Create a new registry shared via `Arc`.
+    ///
+    /// # Parameters
+    /// * `failure_threshold` – number of consecutive failures before the breaker opens.
+    /// * `reset_timeout` – how long to wait in the `Open` state before probing recovery.
     #[must_use]
     pub fn new(failure_threshold: u32, reset_timeout: Duration) -> Arc<Self> {
         Arc::new(Self {
