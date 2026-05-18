@@ -83,6 +83,31 @@ impl HealthCheckResult {
     }
 }
 
+/// The current status of an upstream as determined by the health checker.
+///
+/// `Unknown` is the initial state before any probe has been completed.
+/// The proxy treats `Unknown` as `Healthy` so upstreams are not silently
+/// dropped on first start.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UpstreamStatus {
+    /// The upstream is responding to health probes within the expected latency.
+    Healthy,
+    /// The upstream has exceeded the `unhealthy_threshold` consecutive failures.
+    Unhealthy,
+    /// No health probe has been completed yet.
+    Unknown,
+}
+
+impl std::fmt::Display for UpstreamStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Healthy => write!(f, "healthy"),
+            Self::Unhealthy => write!(f, "unhealthy"),
+            Self::Unknown => write!(f, "unknown"),
+        }
+    }
+}
+
 /// Shared, lock-free upstream health state.
 ///
 /// Keys are upstream IDs (String). Absent entries are treated as healthy so
