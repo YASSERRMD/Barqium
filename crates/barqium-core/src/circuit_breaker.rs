@@ -1,8 +1,49 @@
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use dashmap::DashMap;
 use tracing::{info, warn};
+
+/// Aggregate metrics for all circuit breakers in the registry.
+///
+/// Counters use relaxed atomics — they are read by monitoring/metrics
+/// exporters and do not participate in any synchronisation protocol.
+#[derive(Debug, Default)]
+pub struct CircuitBreakerMetrics {
+    /// Total number of calls (allowed or rejected) across all breakers.
+    pub total_calls: AtomicU64,
+    /// Number of calls that completed successfully.
+    pub successful_calls: AtomicU64,
+    /// Number of calls that were recorded as failures.
+    pub failed_calls: AtomicU64,
+    /// Number of state transitions (Closed→Open, Open→HalfOpen, HalfOpen→Closed).
+    pub state_transitions: AtomicU64,
+}
+
+impl CircuitBreakerMetrics {
+    /// Create a new zeroed metrics instance.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Increment the successful-calls counter.
+    pub fn on_success(&self) {
+        self.total_calls.fetch_add(1, Ordering::Relaxed);
+        self.successful_calls.fetch_add(1, Ordering::Relaxed);
+    }
+
+    /// Increment the failed-calls counter.
+    pub fn on_failure(&self) {
+        self.total_calls.fetch_add(1, Ordering::Relaxed);
+        self.failed_calls.fetch_add(1, Ordering::Relaxed);
+    }
+
+    /// Increment the state-transitions counter.
+    pub fn on_transition(&self) {
+        self.state_transitions.fetch_add(1, Ordering::Relaxed);
+    }
+}
 
 /// Configuration parameters for a circuit breaker instance.
 ///
