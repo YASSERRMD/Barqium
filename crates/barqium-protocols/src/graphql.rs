@@ -6,6 +6,38 @@ use dashmap::DashMap;
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
 
+/// A structured GraphQL request ready to be forwarded to an upstream endpoint.
+///
+/// This struct is produced by deserialising the inbound HTTP request body
+/// after [`detect`] has confirmed the request is GraphQL.
+#[derive(Debug, Clone)]
+pub struct GraphQlQuery {
+    /// The `operationName` field from the request body, if provided.
+    ///
+    /// Clients may omit this when the document contains a single operation.
+    pub operation_name: Option<String>,
+
+    /// The full GraphQL document string (query, mutation, or subscription).
+    pub query: String,
+
+    /// JSON-encoded variables object, if any.
+    ///
+    /// Stored as a raw [`serde_json::Value`] to preserve the original types
+    /// when forwarding to the upstream GraphQL server.
+    pub variables: Option<serde_json::Value>,
+}
+
+impl GraphQlQuery {
+    /// Create a minimal query with no operation name and no variables.
+    pub fn new(query: impl Into<String>) -> Self {
+        Self {
+            operation_name: None,
+            query: query.into(),
+            variables: None,
+        }
+    }
+}
+
 /// Detected GraphQL operation type.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OperationType {
