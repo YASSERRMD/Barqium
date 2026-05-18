@@ -156,3 +156,135 @@ export const routes = {
   delete: (tenantId: string, id: string) =>
     request<void>(`/tenants/${tenantId}/routes/${id}`, { method: 'DELETE' }),
 }
+
+// ---- AI Providers ---------------------------------------------------------
+
+export interface AiProvider {
+  id: string
+  tenant_id: string
+  name: string
+  slug: string
+  base_url?: string
+  enabled: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface CreateAiProviderBody {
+  name: string
+  slug: string
+  base_url?: string
+  api_key_env?: string
+  enabled?: boolean
+}
+
+export const aiProviders = {
+  list: (tenantId: string) => request<AiProvider[]>(`/tenants/${tenantId}/ai-providers`),
+  create: (tenantId: string, body: CreateAiProviderBody) =>
+    request<AiProvider>(`/tenants/${tenantId}/ai-providers`, { method: 'POST', body: JSON.stringify(body) }),
+  delete: (tenantId: string, id: string) =>
+    request<void>(`/tenants/${tenantId}/ai-providers/${id}`, { method: 'DELETE' }),
+}
+
+// ---- Rate Limit Policies --------------------------------------------------
+
+export interface RateLimitPolicy {
+  id: string
+  tenant_id: string
+  name: string
+  scope: 'tenant' | 'consumer' | 'route' | 'ip'
+  algorithm: 'token_bucket' | 'sliding_window' | 'fixed_window'
+  rate_limit: number
+  window_secs: number
+  burst_limit?: number
+  enabled: boolean
+  created_at: string
+}
+
+export interface CreateRateLimitPolicyBody {
+  name: string
+  scope: RateLimitPolicy['scope']
+  algorithm: RateLimitPolicy['algorithm']
+  rate_limit: number
+  window_secs: number
+  burst_limit?: number
+  enabled?: boolean
+}
+
+export const rateLimitPolicies = {
+  list: (tenantId: string) => request<RateLimitPolicy[]>(`/tenants/${tenantId}/rate-limit-policies`),
+  create: (tenantId: string, body: CreateRateLimitPolicyBody) =>
+    request<RateLimitPolicy>(`/tenants/${tenantId}/rate-limit-policies`, { method: 'POST', body: JSON.stringify(body) }),
+  delete: (tenantId: string, id: string) =>
+    request<void>(`/tenants/${tenantId}/rate-limit-policies/${id}`, { method: 'DELETE' }),
+}
+
+// ---- WASM Plugins ---------------------------------------------------------
+
+export interface WasmPlugin {
+  id: string
+  tenant_id: string
+  name: string
+  version: string
+  trigger: 'on_request' | 'on_response' | 'both'
+  sha256: string
+  enabled: boolean
+  created_at: string
+}
+
+export interface CreateWasmPluginBody {
+  name: string
+  version: string
+  trigger: WasmPlugin['trigger']
+  storage_url?: string
+  enabled?: boolean
+}
+
+export const wasmPlugins = {
+  list: (tenantId: string) => request<WasmPlugin[]>(`/tenants/${tenantId}/wasm-plugins`),
+  create: (tenantId: string, body: CreateWasmPluginBody) =>
+    request<WasmPlugin>(`/tenants/${tenantId}/wasm-plugins`, { method: 'POST', body: JSON.stringify(body) }),
+  delete: (tenantId: string, id: string) =>
+    request<void>(`/tenants/${tenantId}/wasm-plugins/${id}`, { method: 'DELETE' }),
+}
+
+// ---- Consumers ------------------------------------------------------------
+
+export interface Consumer {
+  id: string
+  tenant_id: string
+  name: string
+  api_key_prefix?: string
+  enabled: boolean
+  created_at: string
+}
+
+export interface CreateConsumerBody {
+  name: string
+  enabled?: boolean
+}
+
+export const consumers = {
+  list: (tenantId: string) => request<Consumer[]>(`/tenants/${tenantId}/consumers`),
+  create: (tenantId: string, body: CreateConsumerBody) =>
+    request<Consumer>(`/tenants/${tenantId}/consumers`, { method: 'POST', body: JSON.stringify(body) }),
+  delete: (tenantId: string, id: string) =>
+    request<void>(`/tenants/${tenantId}/consumers/${id}`, { method: 'DELETE' }),
+}
+
+// ---- Regions --------------------------------------------------------------
+
+export interface Region {
+  id: string
+  name: string
+  kafka_brokers: string
+  is_primary: boolean
+  created_at: string
+}
+
+export const regions = {
+  list: () => request<Region[]>('/regions'),
+  create: (body: { name: string; kafka_brokers: string; is_primary?: boolean }) =>
+    request<Region>('/regions', { method: 'POST', body: JSON.stringify(body) }),
+  delete: (id: string) => request<void>(`/regions/${id}`, { method: 'DELETE' }),
+}
