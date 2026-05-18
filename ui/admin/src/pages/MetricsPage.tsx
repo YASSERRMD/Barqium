@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Activity, Zap, Clock, XCircle } from 'lucide-react'
 import { PageHeader } from '@/components/ui/empty-state'
 import { StatCard } from '@/components/dashboard/stat-card'
@@ -11,6 +11,7 @@ import { TopRoutesTable } from '@/components/metrics/top-routes-table'
 import { ProviderCostSummary } from '@/components/metrics/provider-cost-summary'
 import { CacheHitRate } from '@/components/metrics/cache-hit-rate'
 import { useLiveMetrics } from '@/hooks/use-live-metrics'
+import { usePersistedState } from '@/hooks/use-persisted-state'
 import { cn } from '@/lib/utils'
 
 type Tab = 'overview' | 'latency' | 'errors' | 'ai-cost'
@@ -25,7 +26,7 @@ const TABS: { key: Tab; label: string }[] = [
 
 const WINDOWS: Window[] = ['1h', '6h', '24h', '7d']
 
-const STORAGE_KEY = 'metrics:timeWindow'
+const STORAGE_KEY_WINDOW = 'metrics:timeWindow'
 
 const FAKE_ERRORS = [
   { status: 429, label: 'Too Many Requests',    count: 1230 },
@@ -51,16 +52,14 @@ const FAKE_PROVIDERS = [
 
 export function MetricsPage() {
   const [tab, setTab] = useState<Tab>('overview')
-  const [window, setWindow] = useState<Window>(() => {
-    const stored = localStorage.getItem(STORAGE_KEY)
-    return (WINDOWS as string[]).includes(stored ?? '') ? (stored as Window) : '1h'
-  })
+  const [window, setWindow] = usePersistedState<Window>(
+    STORAGE_KEY_WINDOW,
+    '1h',
+    v => v,
+    raw => (WINDOWS as string[]).includes(raw) ? (raw as Window) : '1h',
+  )
 
   const { current, history, connected } = useLiveMetrics()
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, window)
-  }, [window])
 
   const reqHistory  = history.map(m => m.requestRate)
   const errHistory  = history.map(m => m.errorRate)
