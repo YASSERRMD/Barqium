@@ -1,167 +1,175 @@
-import { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Trash2 } from 'lucide-react'
-import { tenants, type Tenant, type CreateTenantBody } from '@/api/client'
-import { Button } from '@/components/ui/button'
+import { useMemo, useState } from 'react'
+import { Plus, Building2 } from 'lucide-react'
+import { PageHeader } from '@/components/ui/empty-state'
+import { DataTable, type Column } from '@/components/ui/data-table'
+import { SearchBar, FilterSelect } from '@/components/ui/search-bar'
 import { Badge } from '@/components/ui/badge'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+import { Modal } from '@/components/ui/modal'
+import { Pagination } from '@/components/ui/pagination'
+import { TenantForm } from '@/components/tenants/tenant-form'
+import { TenantRowActions } from '@/components/tenants/tenant-row-actions'
+import { TenantDetailPanel } from '@/components/tenants/tenant-detail-panel'
+import { TenantStatsBar } from '@/components/tenants/tenant-stats-bar'
+import { useTenants, useCreateTenant, useUpdateTenant } from '@/hooks/use-tenants'
+import { useToast } from '@/components/ui/toast'
+import { formatDate } from '@/lib/date-utils'
+import type { Tenant } from '@/api/client'
 
-function CreateTenantDialog({
-  onClose,
-}: {
-  onClose: () => void
-}) {
-  const qc = useQueryClient()
-  const [name, setName] = useState('')
-  const [slug, setSlug] = useState('')
-
-  const mutation = useMutation({
-    mutationFn: (body: CreateTenantBody) => tenants.create(body),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['tenants'] })
-      onClose()
-    },
-  })
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    mutation.mutate({ name, slug })
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
-        <h2 className="font-heading text-lg font-bold text-navy mb-4">New Tenant</h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-            <input
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy/30"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Slug</label>
-            <input
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy/30"
-              value={slug}
-              onChange={(e) => setSlug(e.target.value)}
-              pattern="^[a-z0-9]([a-z0-9\-]{0,61}[a-z0-9])?$"
-              required
-            />
-            <p className="text-xs text-gray-400 mt-1">Lowercase alphanumeric with hyphens.</p>
-          </div>
-          {mutation.isError && (
-            <p className="text-sm text-red-600">{String(mutation.error)}</p>
-          )}
-          <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={mutation.isPending}>
-              {mutation.isPending ? 'Creating...' : 'Create'}
-            </Button>
-          </div>
-        </form>
-      </div>
-    </div>
-  )
-}
+const PAGE_SIZE = 10
 
 export function TenantsPage() {
-  const qc = useQueryClient()
-  const [showCreate, setShowCreate] = useState(false)
+  const [search, setSearch]     = useState('')
+  const [status, setStatus]     = useState('all')
+  const [page, setPage]         = useState(1)
+  const [creating, setCreating] = useState(false)
+  const [editing, setEditing]   = useState<Tenant | null>(null)
+  const [selected, setSelected] = useState<Tenant | null>(null)
 
-  const { data, isLoading, isError } = useQuery({
-    queryKey: ['tenants'],
-    queryFn: () => tenants.list(),
-  })
+  const { toast } = useToast()
+  const { data = [], isLoading, isError } = useTenants()
 
-  const deleteMutation = useMutation({
-    mutationFn: (id: string) => tenants.delete(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['tenants'] }),
-  })
+  const createMut = useCreateTenant(() => { toast({ title: 'Tenant created', variant: 'success' }); setCreating(false) })
+  const editMut   = useUpdateTenant(editing?.id ?? '', () => { toast({ title: 'Tenant updated', variant: 'success' }); setEditing(null) })
 
-  const handleDelete = (t: Tenant) => {
-    if (confirm(`Delete tenant "${t.name}"? This cannot be undone.`)) {
-      deleteMutation.mutate(t.id)
-    }
-  }
+  const filtered = useMemo(() => {
+    let list = data
+    if (search) list = list.filter(t => t.name.toLowerCase().includes(search.toLowerCase()) || t.slug.includes(search.toLowerCase()))
+    if (status === 'active')   list = list.filter(t => t.enabled)
+    if (status === 'inactive') list = list.filter(t => !t.enabled)
+    return list
+  }, [data, search, status])
+
+  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+
+  const columns: Column<Tenant>[] = [
+    {
+      key: 'name',
+      header: 'Name',
+      cell: t => (
+        <button
+          className="flex items-center gap-2 text-left hover:text-gold transition-colors"
+          onClick={() => setSelected(t)}
+        >
+          <div className="w-7 h-7 rounded-md bg-navy/8 dark:bg-white/8 flex items-center justify-center flex-shrink-0">
+            <Building2 size={13} className="text-navy dark:text-gold" />
+          </div>
+          <div>
+            <p className="font-medium text-navy dark:text-white text-sm">{t.name}</p>
+            <p className="text-xs text-gray-400 font-code">{t.slug}</p>
+          </div>
+        </button>
+      ),
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      width: '100px',
+      cell: t => <Badge variant={t.enabled ? 'success' : 'ghost'} dot>{t.enabled ? 'Active' : 'Inactive'}</Badge>,
+    },
+    {
+      key: 'created',
+      header: 'Created',
+      width: '120px',
+      cell: t => <span className="text-xs text-gray-500">{formatDate(t.created_at)}</span>,
+    },
+    {
+      key: 'actions',
+      header: '',
+      width: '100px',
+      align: 'right',
+      cell: t => <TenantRowActions tenant={t} onEdit={() => setEditing(t)} />,
+    },
+  ]
 
   return (
-    <div className="p-8">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="font-heading text-2xl font-bold text-navy">Tenants</h1>
-          <p className="text-gray-500 text-sm mt-0.5">Manage gateway tenants.</p>
-        </div>
-        <Button onClick={() => setShowCreate(true)}>
-          <Plus size={16} />
-          New Tenant
-        </Button>
-      </div>
+    <div className="p-8 max-w-[1200px] mx-auto animate-fade-in">
+      <PageHeader
+        title="Tenants"
+        subtitle="Manage gateway tenants and their configuration."
+        action={
+          <button className="btn-primary" onClick={() => setCreating(true)}>
+            <Plus size={15} /> New Tenant
+          </button>
+        }
+      />
 
-      {isLoading && <p className="text-gray-400 text-sm">Loading...</p>}
-      {isError && <p className="text-red-600 text-sm">Failed to load tenants.</p>}
-
-      {data && (
-        <div className="rounded-lg border bg-white">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Slug</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {data.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center text-gray-400 py-8">
-                    No tenants yet.
-                  </TableCell>
-                </TableRow>
-              )}
-              {data.map((t) => (
-                <TableRow key={t.id}>
-                  <TableCell className="font-medium">{t.name}</TableCell>
-                  <TableCell className="font-code text-xs text-gray-600">{t.slug}</TableCell>
-                  <TableCell>
-                    <Badge variant={t.enabled ? 'success' : 'outline'}>
-                      {t.enabled ? 'enabled' : 'disabled'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-gray-500 text-xs">
-                    {new Date(t.created_at).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <button
-                      onClick={() => handleDelete(t)}
-                      className="text-gray-400 hover:text-red-500 transition-colors"
-                      aria-label={`Delete ${t.name}`}
-                    >
-                      <Trash2 size={15} />
-                    </button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+      {/* Stats */}
+      {data.length > 0 && (
+        <div className="mb-6">
+          <TenantStatsBar tenants={data} />
         </div>
       )}
 
-      {showCreate && <CreateTenantDialog onClose={() => setShowCreate(false)} />}
+      {/* Filters */}
+      <div className="flex items-center gap-3 mb-4">
+        <SearchBar
+          value={search}
+          onChange={v => { setSearch(v); setPage(1) }}
+          placeholder="Search tenants…"
+          className="w-64"
+        />
+        <FilterSelect
+          label="Status"
+          value={status}
+          onChange={v => { setStatus(v); setPage(1) }}
+          options={[
+            { label: 'All',      value: 'all'      },
+            { label: 'Active',   value: 'active'   },
+            { label: 'Inactive', value: 'inactive' },
+          ]}
+        />
+      </div>
+
+      {isError && (
+        <div className="card p-4 border-red-200 bg-red-50 dark:bg-red-950 dark:border-red-800 mb-4">
+          <p className="text-sm text-red-600 dark:text-red-400">Failed to load tenants. Is the control API running?</p>
+        </div>
+      )}
+
+      <DataTable
+        columns={columns}
+        data={paginated}
+        keyFn={t => t.id}
+        loading={isLoading}
+        emptyTitle={search || status !== 'all' ? 'No tenants match your filters' : 'No tenants yet'}
+        emptyDescription={!search && status === 'all' ? 'Create your first tenant to get started.' : undefined}
+        emptyAction={
+          !search && status === 'all'
+            ? <button className="btn-primary btn-sm" onClick={() => setCreating(true)}><Plus size={13} /> New Tenant</button>
+            : undefined
+        }
+      />
+
+      <Pagination
+        page={page}
+        pageSize={PAGE_SIZE}
+        total={filtered.length}
+        onPageChange={setPage}
+      />
+
+      {/* Create modal */}
+      <Modal open={creating} onClose={() => setCreating(false)} title="New Tenant" description="Add a new tenant to the gateway." size="md">
+        <TenantForm
+          onSubmit={body => createMut.mutateAsync(body)}
+          onCancel={() => setCreating(false)}
+          submitLabel="Create Tenant"
+        />
+      </Modal>
+
+      {/* Edit modal */}
+      <Modal open={!!editing} onClose={() => setEditing(null)} title="Edit Tenant" size="md">
+        {editing && (
+          <TenantForm
+            initial={editing}
+            onSubmit={body => editMut.mutateAsync(body)}
+            onCancel={() => setEditing(null)}
+            submitLabel="Save Changes"
+          />
+        )}
+      </Modal>
+
+      {/* Detail panel */}
+      <TenantDetailPanel tenant={selected} onClose={() => setSelected(null)} />
     </div>
   )
 }
