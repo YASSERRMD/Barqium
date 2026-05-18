@@ -1,9 +1,16 @@
 //! WASM plugin runtime for Barqium: wasmtime host, hot-reload watcher.
 
+pub mod config;
 pub mod error;
 pub mod host;
+pub mod host_functions;
+pub mod hot_reload;
+pub mod registry;
 pub mod runtime;
+pub mod sandbox;
+pub mod trigger;
 pub mod types;
+pub mod version;
 pub mod watcher;
 
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -53,7 +60,14 @@ impl PluginMetrics {
     }
 }
 
-pub use error::WasmError;
+pub use config::PluginConfig;
+pub use error::{PluginError, WasmError};
+pub use host_functions::HostFunctions;
+pub use hot_reload::HotReloadWatcher;
+pub use registry::{PluginEntry, PluginRegistry};
 pub use runtime::PluginRuntime;
+pub use sandbox::PluginSandbox;
+pub use trigger::PluginTrigger;
 pub use types::{Action, RequestContext, ResponseContext};
+pub use version::{version_from_str, PluginVersion};
 pub use watcher::spawn_watcher;
