@@ -8,7 +8,10 @@ use tracing::{debug, info};
 
 use crate::error::ProxyError;
 
-/// QUIC endpoint configuration derived from environment variables.
+/// QUIC connection configuration derived from environment variables.
+///
+/// Controls how the QUIC/HTTP3 listener is bound and how individual
+/// connections are managed (timeouts, 0-RTT, stream concurrency).
 #[derive(Debug, Clone)]
 pub struct QuicConfig {
     /// UDP socket address to bind (e.g. `0.0.0.0:443`).
@@ -17,6 +20,11 @@ pub struct QuicConfig {
     pub idle_timeout: Duration,
     /// Enable 0-RTT resumption (optimistic accept for returning clients).
     pub enable_0rtt: bool,
+    /// Maximum number of concurrent bidirectional streams per connection.
+    ///
+    /// Limits the number of in-flight HTTP/3 requests a single QUIC
+    /// connection may have open simultaneously. Defaults to 100.
+    pub max_concurrent_streams: u64,
 }
 
 impl Default for QuicConfig {
@@ -25,11 +33,15 @@ impl Default for QuicConfig {
             listen_addr: "0.0.0.0:443".parse().expect("static addr"),
             idle_timeout: Duration::from_secs(30),
             enable_0rtt: true,
+            max_concurrent_streams: 100,
         }
     }
 }
 
-/// Build a quinn `ServerConfig` from an existing rustls `ServerConfig`.
+/// Build a [`quinn::ServerConfig`] from an existing rustls [`ServerConfig`].
+///
+/// ALPN is set to `h3` so HTTP/3 clients can negotiate the protocol.
+/// The transport layer applies the idle-timeout and stream limits from `cfg`.
 ///
 /// ALPN is overridden to advertise `h3` so HTTP/3 clients can negotiate
 /// the protocol. The transport layer applies the idle-timeout from `cfg`.
@@ -59,6 +71,7 @@ pub fn build_quinn_server_config(
             .map_err(|_| ProxyError::Tls("idle timeout out of range".into()))?,
     ));
     transport.keep_alive_interval(Some(Duration::from_secs(5)));
+    transport.max_concurrent_bidi_streams(cfg.max_concurrent_streams.into());
 
     let mut quinn_cfg = QuinnServerConfig::with_crypto(Arc::new(quic_tls));
     quinn_cfg.transport_config(Arc::new(transport));
