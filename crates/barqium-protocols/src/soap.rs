@@ -7,6 +7,33 @@ pub enum SoapVersion {
     Soap12,
 }
 
+impl std::fmt::Display for SoapVersion {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Soap11 => write!(f, "SOAP/1.1"),
+            Self::Soap12 => write!(f, "SOAP/1.2"),
+        }
+    }
+}
+
+impl SoapVersion {
+    /// Return the canonical namespace URI for this SOAP version.
+    pub fn namespace_uri(&self) -> &'static str {
+        match self {
+            Self::Soap11 => "http://schemas.xmlsoap.org/soap/envelope/",
+            Self::Soap12 => "http://www.w3.org/2003/05/soap-envelope",
+        }
+    }
+
+    /// Return the MIME type used in `Content-Type` for this SOAP version.
+    pub fn content_type(&self) -> &'static str {
+        match self {
+            Self::Soap11 => "text/xml; charset=utf-8",
+            Self::Soap12 => "application/soap+xml; charset=utf-8",
+        }
+    }
+}
+
 /// A parsed SOAP envelope comprising a header section and a body section.
 ///
 /// Both sections are stored as raw XML strings so the gateway can relay
