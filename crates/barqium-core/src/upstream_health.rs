@@ -45,6 +45,44 @@ impl Default for HealthCheckConfig {
     }
 }
 
+/// The outcome of a single health probe for one upstream.
+///
+/// Produced by the [`HealthChecker`] after each probe attempt and passed
+/// to the [`UpstreamHealth`] registry to update the upstream's status.
+#[derive(Debug, Clone)]
+pub struct HealthCheckResult {
+    /// The upstream identifier this result applies to.
+    pub upstream_id: String,
+    /// Whether the probe considered the upstream reachable and healthy.
+    pub is_healthy: bool,
+    /// Round-trip time for the probe in milliseconds.
+    pub latency_ms: u64,
+    /// Wall-clock time at which the probe completed.
+    pub checked_at: SystemTime,
+}
+
+impl HealthCheckResult {
+    /// Create a healthy result with the given latency.
+    pub fn healthy(upstream_id: impl Into<String>, latency_ms: u64) -> Self {
+        Self {
+            upstream_id: upstream_id.into(),
+            is_healthy: true,
+            latency_ms,
+            checked_at: SystemTime::now(),
+        }
+    }
+
+    /// Create an unhealthy result (probe failed or timed out).
+    pub fn unhealthy(upstream_id: impl Into<String>, latency_ms: u64) -> Self {
+        Self {
+            upstream_id: upstream_id.into(),
+            is_healthy: false,
+            latency_ms,
+            checked_at: SystemTime::now(),
+        }
+    }
+}
+
 /// Shared, lock-free upstream health state.
 ///
 /// Keys are upstream IDs (String). Absent entries are treated as healthy so
