@@ -1,4 +1,5 @@
 use std::net::SocketAddr;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -81,6 +82,50 @@ impl QuicConnectionPool {
     /// Return `true` if the pool contains no connections.
     pub fn is_empty(&self) -> bool {
         self.connections.is_empty()
+    }
+}
+
+/// Runtime metrics for the QUIC/HTTP3 endpoint.
+///
+/// All counters use relaxed atomics — they are intended for observability
+/// dashboards and do not participate in any synchronisation protocol.
+#[derive(Debug, Default)]
+pub struct QuicMetrics {
+    /// Total number of QUIC connections accepted since startup.
+    pub total_connections: AtomicU64,
+    /// Number of QUIC connections currently open.
+    pub active_connections: AtomicU64,
+    /// Total bytes received across all QUIC connections.
+    pub bytes_received: AtomicU64,
+    /// Total bytes sent across all QUIC connections.
+    pub bytes_sent: AtomicU64,
+}
+
+impl QuicMetrics {
+    /// Create a new zeroed metrics instance.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Record a new connection being accepted.
+    pub fn on_connection_accepted(&self) {
+        self.total_connections.fetch_add(1, Ordering::Relaxed);
+        self.active_connections.fetch_add(1, Ordering::Relaxed);
+    }
+
+    /// Record a connection being closed.
+    pub fn on_connection_closed(&self) {
+        self.active_connections.fetch_sub(1, Ordering::Relaxed);
+    }
+
+    /// Add `n` to the bytes-received counter.
+    pub fn record_bytes_received(&self, n: u64) {
+        self.bytes_received.fetch_add(n, Ordering::Relaxed);
+    }
+
+    /// Add `n` to the bytes-sent counter.
+    pub fn record_bytes_sent(&self, n: u64) {
+        self.bytes_sent.fetch_add(n, Ordering::Relaxed);
     }
 }
 
