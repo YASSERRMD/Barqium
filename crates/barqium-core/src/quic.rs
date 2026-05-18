@@ -100,6 +100,22 @@ pub fn alt_svc_header_value(port: u16) -> String {
     format!("h3=\":{port}\"; ma=86400")
 }
 
+/// Inject an `Alt-Svc` header into an HTTP response, advertising HTTP/3.
+///
+/// Call this in the response path for all HTTP/1.1 and HTTP/2 responses when
+/// QUIC is enabled. The header tells clients that HTTP/3 is available on the
+/// same host and port, allowing them to upgrade on their next request.
+///
+/// # Arguments
+/// * `response` – mutable reference to the response whose headers to amend.
+/// * `quic_port` – the UDP port on which the QUIC endpoint is listening.
+pub fn inject_alt_svc<B>(response: &mut http::Response<B>, quic_port: u16) {
+    let value = alt_svc_header_value(quic_port);
+    if let Ok(v) = http::HeaderValue::from_str(&value) {
+        response.headers_mut().insert(http::header::ALT_SVC, v);
+    }
+}
+
 /// Build a [`quinn::ServerConfig`] from an existing rustls [`ServerConfig`].
 ///
 /// ALPN is set to `h3` so HTTP/3 clients can negotiate the protocol.
