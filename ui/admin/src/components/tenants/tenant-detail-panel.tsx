@@ -67,7 +67,7 @@ export function TenantDetailPanel({ tenant, onClose }: TenantDetailPanelProps) {
                 <h3 className="font-semibold text-navy dark:text-white">{tenant.name}</h3>
                 <p className="text-xs text-gray-500 font-code mt-0.5">{tenant.slug}</p>
               </div>
-              <button className="btn-icon btn-ghost" onClick={onClose}>
+              <button className="btn-icon btn-ghost" onClick={onClose} aria-label="Close panel">
                 <X size={16} />
               </button>
             </div>

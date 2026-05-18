@@ -66,7 +66,7 @@ export function UpstreamDetailPanel({ upstream, onClose }: UpstreamDetailPanelPr
                 <h3 className="font-semibold text-navy dark:text-white">{upstream.name}</h3>
                 <p className="text-xs text-gray-500 font-code mt-0.5 truncate max-w-[200px]">{upstream.base_url}</p>
               </div>
-              <button className="btn-icon btn-ghost" onClick={onClose}>
+              <button className="btn-icon btn-ghost" onClick={onClose} aria-label="Close panel">
                 <X size={16} />
               </button>
             </div>

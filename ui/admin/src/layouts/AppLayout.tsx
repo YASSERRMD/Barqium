@@ -1,11 +1,15 @@
 import { useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
+import { CommandPalette } from '@/components/command-palette/command-palette'
+import { useCommandPalette } from '@/components/command-palette/use-command-palette'
 import {
   LayoutDashboard, Network, Route, Building2, Activity,
   Brain, Shield, Puzzle, Users, ClipboardList,
   Globe, GitBranch, ChevronLeft, Sun, Moon, Monitor,
-  Zap,
+  Zap, Search, User,
 } from 'lucide-react'
+import { useLocation } from 'react-router-dom'
+import { KbdShortcut } from '@/components/ui/keyboard-shortcut'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/components/ui/theme-provider'
 
@@ -51,9 +55,28 @@ const themeOptions: Array<{ value: 'light' | 'dark' | 'system'; icon: React.Elem
   { value: 'system', icon: Monitor, label: 'System' },
 ]
 
+const PAGE_TITLES: Record<string, string> = {
+  '/':            'Dashboard',
+  '/metrics':     'Metrics',
+  '/tenants':     'Tenants',
+  '/upstreams':   'Upstreams',
+  '/routes':      'Routes',
+  '/consumers':   'Consumers',
+  '/ai-providers':'AI Providers',
+  '/rate-limits': 'Rate Limits',
+  '/wasm-plugins':'WASM Plugins',
+  '/audit':       'Audit Log',
+  '/checkpoints': 'Checkpoints',
+  '/regions':     'Regions',
+  '/policies':    'Policies',
+}
+
 export function AppLayout() {
   const [collapsed, setCollapsed] = useState(false)
   const { theme, setTheme } = useTheme()
+  const { open: paletteOpen, openPalette, closePalette } = useCommandPalette()
+  const location = useLocation()
+  const pageTitle = PAGE_TITLES[location.pathname] ?? 'Barqium'
 
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-950 overflow-hidden font-body">
@@ -78,6 +101,27 @@ export function AppLayout() {
           {collapsed && <span className="font-heading text-lg font-bold text-gold">B</span>}
         </div>
 
+        {/* Search / Command Palette button */}
+        {!collapsed ? (
+          <button
+            onClick={openPalette}
+            className="mx-3 mb-2 flex items-center gap-2 rounded-lg px-3 py-2 text-xs text-white/40 bg-white/5 hover:bg-white/10 hover:text-white/70 transition-colors w-[calc(100%-1.5rem)]"
+          >
+            <Search size={13} className="flex-shrink-0" />
+            <span className="flex-1 text-left">Search…</span>
+            <kbd className="text-[9px] rounded border border-white/20 px-1 py-0.5 font-code">⌘K</kbd>
+          </button>
+        ) : (
+          <button
+            onClick={openPalette}
+            title="Search (⌘K)"
+            aria-label="Open command palette (⌘K)"
+            className="w-10 h-10 mx-auto flex items-center justify-center rounded-lg text-white/40 hover:text-white/70 hover:bg-white/8 transition-colors"
+          >
+            <Search size={15} />
+          </button>
+        )}
+
         {/* Nav */}
         <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-4">
           {navGroups.map(group => (
@@ -94,6 +138,7 @@ export function AppLayout() {
                     to={to}
                     end={to === '/'}
                     title={collapsed ? label : undefined}
+                    aria-label={label}
                     className={({ isActive }) =>
                       cn(
                         'flex items-center gap-3 rounded-lg text-sm transition-colors',
@@ -168,10 +213,46 @@ export function AppLayout() {
         </button>
       </aside>
 
-      {/* Main */}
-      <main className="flex-1 overflow-auto">
-        <Outlet />
-      </main>
+      {/* Main content column */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Header bar */}
+        <header className="h-14 flex-shrink-0 flex items-center justify-between px-6 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
+          {/* Left: breadcrumb + page title */}
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-xs text-gray-400">Barqium</span>
+            <span className="text-gray-300 dark:text-gray-600">/</span>
+            <span className="text-sm font-semibold text-navy dark:text-white truncate">{pageTitle}</span>
+          </div>
+
+          {/* Right: search hint + user info */}
+          <div className="flex items-center gap-4">
+            <button
+              onClick={openPalette}
+              className="hidden sm:flex items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-1.5 text-xs text-gray-400 hover:border-gray-300 dark:hover:border-gray-600 hover:text-gray-600 transition-colors"
+              aria-label="Open command palette"
+            >
+              <Search size={12} />
+              <span>Search…</span>
+              <KbdShortcut keys={['⌘', 'K']} />
+            </button>
+
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-full bg-navy/10 dark:bg-white/10 flex items-center justify-center">
+                <User size={14} className="text-navy dark:text-gray-400" />
+              </div>
+              <span className="hidden md:block text-xs font-medium text-gray-600 dark:text-gray-300">Admin</span>
+            </div>
+          </div>
+        </header>
+
+        {/* Page content */}
+        <main className="flex-1 overflow-auto">
+          <Outlet />
+        </main>
+      </div>
+
+      {/* Command Palette (rendered at root level) */}
+      <CommandPalette open={paletteOpen} onClose={closePalette} />
     </div>
   )
 }

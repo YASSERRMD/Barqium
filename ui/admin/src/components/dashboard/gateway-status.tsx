@@ -86,6 +86,7 @@ export function GatewayStatusCard({ health, isError, isLoading, lastUpdated, onR
             onClick={onRefresh}
             className="btn-icon btn-ghost w-7 h-7 text-gray-400"
             title="Refresh health"
+            aria-label="Refresh health status"
           >
             <RefreshCw size={13} />
           </button>
