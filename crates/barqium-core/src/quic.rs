@@ -1,14 +1,20 @@
 use std::net::SocketAddr;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 
-use quinn::{Endpoint, ServerConfig as QuinnServerConfig, TransportConfig};
+use bytes::Bytes;
+use dashmap::DashMap;
+use quinn::{Connection, Endpoint, ServerConfig as QuinnServerConfig, TransportConfig};
 use rustls::ServerConfig as RustlsServerConfig;
 use tracing::{debug, info};
 
 use crate::error::ProxyError;
 
-/// QUIC endpoint configuration derived from environment variables.
+/// QUIC connection configuration derived from environment variables.
+///
+/// Controls how the QUIC/HTTP3 listener is bound and how individual
+/// connections are managed (timeouts, 0-RTT, stream concurrency).
 #[derive(Debug, Clone)]
 pub struct QuicConfig {
     /// UDP socket address to bind (e.g. `0.0.0.0:443`).
@@ -17,6 +23,11 @@ pub struct QuicConfig {
     pub idle_timeout: Duration,
     /// Enable 0-RTT resumption (optimistic accept for returning clients).
     pub enable_0rtt: bool,
+    /// Maximum number of concurrent bidirectional streams per connection.
+    ///
+    /// Limits the number of in-flight HTTP/3 requests a single QUIC
+    /// connection may have open simultaneously. Defaults to 100.
+    pub max_concurrent_streams: u64,
 }
 
 impl Default for QuicConfig {
@@ -25,11 +36,200 @@ impl Default for QuicConfig {
             listen_addr: "0.0.0.0:443".parse().expect("static addr"),
             idle_timeout: Duration::from_secs(30),
             enable_0rtt: true,
+            max_concurrent_streams: 100,
         }
     }
 }
 
-/// Build a quinn `ServerConfig` from an existing rustls `ServerConfig`.
+/// A pool of active QUIC connections keyed by remote peer address.
+///
+/// Allows the proxy to reuse existing QUIC connections to upstream hosts
+/// instead of re-establishing new ones for every request, reducing latency
+/// and connection overhead.
+#[derive(Debug, Default, Clone)]
+pub struct QuicConnectionPool {
+    connections: Arc<DashMap<SocketAddr, Arc<Connection>>>,
+}
+
+impl QuicConnectionPool {
+    /// Create a new, empty connection pool.
+    pub fn new() -> Self {
+        Self {
+            connections: Arc::new(DashMap::new()),
+        }
+    }
+
+    /// Insert or replace the connection for `peer`.
+    pub fn insert(&self, peer: SocketAddr, conn: Arc<Connection>) {
+        self.connections.insert(peer, conn);
+    }
+
+    /// Retrieve the live connection for `peer`, if any.
+    pub fn get(&self, peer: &SocketAddr) -> Option<Arc<Connection>> {
+        self.connections.get(peer).map(|r| Arc::clone(&*r))
+    }
+
+    /// Remove and drop the connection entry for `peer`.
+    pub fn remove(&self, peer: &SocketAddr) {
+        self.connections.remove(peer);
+    }
+
+    /// Return the number of tracked connections.
+    pub fn len(&self) -> usize {
+        self.connections.len()
+    }
+
+    /// Return `true` if the pool contains no connections.
+    pub fn is_empty(&self) -> bool {
+        self.connections.is_empty()
+    }
+}
+
+/// Runtime metrics for the QUIC/HTTP3 endpoint.
+///
+/// All counters use relaxed atomics — they are intended for observability
+/// dashboards and do not participate in any synchronisation protocol.
+#[derive(Debug, Default)]
+pub struct QuicMetrics {
+    /// Total number of QUIC connections accepted since startup.
+    pub total_connections: AtomicU64,
+    /// Number of QUIC connections currently open.
+    pub active_connections: AtomicU64,
+    /// Total bytes received across all QUIC connections.
+    pub bytes_received: AtomicU64,
+    /// Total bytes sent across all QUIC connections.
+    pub bytes_sent: AtomicU64,
+}
+
+impl QuicMetrics {
+    /// Create a new zeroed metrics instance.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Record a new connection being accepted.
+    pub fn on_connection_accepted(&self) {
+        self.total_connections.fetch_add(1, Ordering::Relaxed);
+        self.active_connections.fetch_add(1, Ordering::Relaxed);
+    }
+
+    /// Record a connection being closed.
+    pub fn on_connection_closed(&self) {
+        self.active_connections.fetch_sub(1, Ordering::Relaxed);
+    }
+
+    /// Add `n` to the bytes-received counter.
+    pub fn record_bytes_received(&self, n: u64) {
+        self.bytes_received.fetch_add(n, Ordering::Relaxed);
+    }
+
+    /// Add `n` to the bytes-sent counter.
+    pub fn record_bytes_sent(&self, n: u64) {
+        self.bytes_sent.fetch_add(n, Ordering::Relaxed);
+    }
+}
+
+/// Health probe for the QUIC endpoint.
+///
+/// Used by liveness and readiness checks to confirm that the QUIC
+/// socket is bound and accepting connections.
+#[derive(Debug, Clone)]
+pub struct QuicHealthCheck {
+    /// The address the QUIC endpoint is expected to be bound to.
+    pub listen_addr: SocketAddr,
+    /// Whether the endpoint has been started and is currently bound.
+    bound: Arc<std::sync::atomic::AtomicBool>,
+}
+
+impl QuicHealthCheck {
+    /// Create a new health-check probe for `listen_addr`.
+    ///
+    /// `bound` should be set to `true` once `serve_quic` successfully binds
+    /// the endpoint and starts accepting connections.
+    pub fn new(listen_addr: SocketAddr) -> Self {
+        Self {
+            listen_addr,
+            bound: Arc::new(std::sync::atomic::AtomicBool::new(false)),
+        }
+    }
+
+    /// Signal that the QUIC socket is now listening.
+    pub fn set_listening(&self) {
+        self.bound.store(true, Ordering::Relaxed);
+    }
+
+    /// Return `true` if the QUIC socket is currently bound and listening.
+    pub fn is_listening(&self) -> bool {
+        self.bound.load(Ordering::Relaxed)
+    }
+}
+
+/// Return `true` if QUIC connection migration is supported in this build.
+///
+/// Connection migration lets a QUIC client seamlessly change its IP address
+/// or port (e.g. moving from Wi-Fi to cellular) without dropping the
+/// connection. Support is gated behind the `quic-migration` Cargo feature
+/// flag so operators can disable it in constrained environments.
+///
+/// # Feature flag
+/// Compile with `--features quic-migration` to enable.
+pub fn quic_connection_migration_supported() -> bool {
+    cfg!(feature = "quic-migration")
+}
+
+/// A parsed HTTP/3 frame carried over a QUIC bidirectional stream.
+///
+/// This enum represents the subset of HTTP/3 frame types (RFC 9114) that
+/// Barqium needs to handle in its H3 framing layer. Variants map directly
+/// to the frame type identifiers in the spec.
+#[derive(Debug, Clone, PartialEq)]
+pub enum Http3Frame {
+    /// A DATA frame carrying request or response body bytes.
+    Data(Bytes),
+    /// A HEADERS frame carrying field section name–value pairs.
+    Headers(Vec<(String, String)>),
+    /// A SETTINGS frame exchanged at connection start on the control stream.
+    Settings,
+    /// A GOAWAY frame signalling the last accepted stream ID.
+    Goaway,
+}
+
+/// Returns the value of the `Alt-Svc` header for a given QUIC port.
+///
+/// Clients that receive this header will know they can upgrade the next
+/// request to HTTP/3 over QUIC. The `ma` (max-age) is set to 86400 seconds
+/// (24 hours), which is the recommended default.
+///
+/// # Example
+/// ```
+/// # use barqium_core::quic::alt_svc_header_value;
+/// let val = alt_svc_header_value(443);
+/// assert_eq!(val, r#"h3=":443"; ma=86400"#);
+/// ```
+pub fn alt_svc_header_value(port: u16) -> String {
+    format!("h3=\":{port}\"; ma=86400")
+}
+
+/// Inject an `Alt-Svc` header into an HTTP response, advertising HTTP/3.
+///
+/// Call this in the response path for all HTTP/1.1 and HTTP/2 responses when
+/// QUIC is enabled. The header tells clients that HTTP/3 is available on the
+/// same host and port, allowing them to upgrade on their next request.
+///
+/// # Arguments
+/// * `response` – mutable reference to the response whose headers to amend.
+/// * `quic_port` – the UDP port on which the QUIC endpoint is listening.
+pub fn inject_alt_svc<B>(response: &mut http::Response<B>, quic_port: u16) {
+    let value = alt_svc_header_value(quic_port);
+    if let Ok(v) = http::HeaderValue::from_str(&value) {
+        response.headers_mut().insert(http::header::ALT_SVC, v);
+    }
+}
+
+/// Build a [`quinn::ServerConfig`] from an existing rustls [`ServerConfig`].
+///
+/// ALPN is set to `h3` so HTTP/3 clients can negotiate the protocol.
+/// The transport layer applies the idle-timeout and stream limits from `cfg`.
 ///
 /// ALPN is overridden to advertise `h3` so HTTP/3 clients can negotiate
 /// the protocol. The transport layer applies the idle-timeout from `cfg`.
@@ -59,6 +259,7 @@ pub fn build_quinn_server_config(
             .map_err(|_| ProxyError::Tls("idle timeout out of range".into()))?,
     ));
     transport.keep_alive_interval(Some(Duration::from_secs(5)));
+    transport.max_concurrent_bidi_streams(cfg.max_concurrent_streams.into());
 
     let mut quinn_cfg = QuinnServerConfig::with_crypto(Arc::new(quic_tls));
     quinn_cfg.transport_config(Arc::new(transport));

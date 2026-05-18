@@ -18,6 +18,10 @@ pub mod websocket;
 pub use circuit_breaker::{CircuitBreakerRegistry, CircuitState};
 pub use config::DataPlaneConfig;
 pub use error::ProxyError;
+pub use quic::{
+    alt_svc_header_value, inject_alt_svc, quic_connection_migration_supported,
+    Http3Frame, QuicConfig, QuicConnectionPool, QuicHealthCheck, QuicMetrics,
+};
 pub use service::ProxyService;
 pub use snapshot::{RouteMatch, SnapshotReader};
 pub use upstream_health::{HealthChecker, UpstreamHealth};

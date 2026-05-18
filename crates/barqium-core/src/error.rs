@@ -33,4 +33,16 @@ pub enum ProxyError {
 
     #[error("TLS error: {0}")]
     Tls(String),
+
+    /// A QUIC-layer error (connection setup, transport, etc.).
+    #[error("QUIC error: {0}")]
+    QuicError(String),
+
+    /// An HTTP/3 framing or protocol error.
+    #[error("HTTP/3 error: {0}")]
+    Http3Error(String),
+
+    /// QUIC connection migration failed or is not supported.
+    #[error("connection migration error: {0}")]
+    ConnectionMigrationError(String),
 }
