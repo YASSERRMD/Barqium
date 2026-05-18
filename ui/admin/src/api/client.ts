@@ -288,3 +288,25 @@ export const regions = {
     request<Region>('/regions', { method: 'POST', body: JSON.stringify(body) }),
   delete: (id: string) => request<void>(`/regions/${id}`, { method: 'DELETE' }),
 }
+
+// ---- Checkpoints ----------------------------------------------------------
+
+export interface Checkpoint {
+  id: string
+  sequence: number
+  note?: string
+  snapshot: Record<string, unknown>
+  created_at: string
+}
+
+export interface CreateCheckpointBody {
+  note?: string
+}
+
+export const checkpoints = {
+  list: () => request<Checkpoint[]>('/checkpoints'),
+  create: (body: CreateCheckpointBody) =>
+    request<Checkpoint>('/checkpoints', { method: 'POST', body: JSON.stringify(body) }),
+  rollback: (id: string) =>
+    request<void>(`/checkpoints/${id}/rollback`, { method: 'POST' }),
+}
